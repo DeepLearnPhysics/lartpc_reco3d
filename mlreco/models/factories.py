@@ -39,18 +39,10 @@ def model_dict():
         "graph_spice": (graph_spice.GraphSPICE, graph_spice.GraphSPICELoss),
         # Graph neural network Particle Aggregation (GrapPA)
         "grappa": (grappa.GNN, grappa.GNNLoss),
-        # Bayesian Classifier
-        "bayes_singlep": (singlep.BayesianParticleClassifier, singlep.ParticleTypeLoss),
         # Bayesian UResNet
         "bayesian_uresnet": (bayes_uresnet.BayesianUResNet, bayes_uresnet.SegmentationLoss),
         # DUQ UResNet
         "duq_uresnet": (bayes_uresnet.DUQUResNet, bayes_uresnet.DUQSegmentationLoss),
-        # Evidential Classifier
-        'evidential_singlep': (singlep.EvidentialParticleClassifier, singlep.EvidentialLearningLoss),
-        # Evidential Classifier with Dropout
-        'evidential_dropout_singlep': (singlep.BayesianParticleClassifier, singlep.EvidentialLearningLoss),
-        # Deep Single Pass Uncertainty Quantification
-        'duq_singlep': (singlep.DUQParticleClassifier, singlep.MultiLabelCrossEntropy),
         # Vertex PPN
         'vertex_ppn': (vertex.VertexPPNChain, vertex.UResNetVertexLoss),
         # Vertex Pointnet
