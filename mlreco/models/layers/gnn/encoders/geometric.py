@@ -33,6 +33,8 @@ class ClustGeoNodeEncoder(torch.nn.Module):
         self.use_numpy = model_config.get('use_numpy', True)
         self.add_value = model_config.get('add_value', False)
         self.add_shape = model_config.get('add_shape', False)
+        
+        self.num_features = 28
 
         # Deprecated
         if 'more_feats' in model_config:
@@ -65,9 +67,9 @@ class ClustGeoNodeEncoder(torch.nn.Module):
             # Do not waste time with computations with size 1 clusters, default to zeros
             if len(c) < 2:
                 feats_v = torch.cat((x.flatten(), torch.zeros(12, dtype=voxels.dtype, device=voxels.device), size))
-                if add_value:
+                if self.add_value:
                     feats_v = torch.cat((feats_v, torch.tensor([values[c[0]], 0.], dtype=voxels.dtype, device=voxels.device)))
-                if add_shape:
+                if self.add_shape:
                     feats_v = torch.cat((feats_v, torch.tensor([sem_types[c[0]]], dtype=voxels.dtype, device=voxels.device)))
 
                 feats.append(feats_v)
@@ -107,9 +109,9 @@ class ClustGeoNodeEncoder(torch.nn.Module):
 
             # Append (center, B.flatten(), v0, size)
             feats_v = torch.cat((center, B.flatten(), v0, size))
-            if add_value:
+            if self.add_value:
                 feats_v = torch.cat((feats_v, torch.tensor([values[c].mean(), values[c].std()], dtype=voxels.dtype, device=voxels.device)))
-            if add_shape:
+            if self.add_shape:
                 feats_v = torch.cat((feats_v, torch.tensor([sem_types[c].mode()], dtype=voxels.dtype, device=voxels.device)))
 
             feats.append(feats_v)

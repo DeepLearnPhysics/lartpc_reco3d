@@ -64,3 +64,62 @@ class SparseResidualEncoder(UResNetEncoder):
         latent = self.linear1(z)
 
         return latent.F
+
+
+class CNNEncoder(UResNetEncoder):
+    
+    def __init__(self, cfg, name='cnn_encoder'):
+        super(CNNEncoder, self).__init__(cfg)
+
+        self.model_config = cfg.get(name, {})
+        self.latent_size = self.model_config.get('latent_size', 512)
+        final_tensor_shape = self.spatial_size // (2**(self.depth-1))
+        self.coordConv = self.model_config.get('coordConv', False)
+        self.pool_mode = self.model_config.get('pool_mode', 'avg')
+        self.dropout = self.model_config.get('dropout', 0.0)
+        
+        
+        if self.pool_mode == 'avg':
+            self.pool = ME.MinkowskiGlobalPooling()
+        elif self.pool_mode == 'conv':
+            self.pool = nn.Sequential(
+                ME.MinkowskiConvolution(
+                    in_channels=self.nPlanes[-1],
+                    out_channels=self.nPlanes[-1],
+                    kernel_size=final_tensor_shape,
+                    stride=final_tensor_shape,
+                    dimension=self.D),
+                ME.MinkowskiGlobalPooling())
+        elif self.pool_mode == 'max':
+            self.pool = nn.Sequential(
+                ME.MinkowskiMaxPooling(final_tensor_shape, stride=final_tensor_shape, dimension=self.D),
+                ME.MinkowskiGlobalPooling())
+        else:
+            raise NotImplementedError
+
+        self.final_layer = nn.Sequential(
+            ME.MinkowskiLinear(self.nPlanes[-1], self.latent_size),
+            ME.MinkowskiReLU(),
+            ME.MinkowskiBatchNorm(self.latent_size),
+            ME.MinkowskiDropout(self.dropout))
+
+    def forward(self, input_tensor):
+
+        # print(input_tensor)
+        features = input_tensor[:, -1].view(-1, 1)
+        if self.coordConv:
+            normalized_coords = (input_tensor[:, 1:4] - float(self.spatial_size) / 2) \
+                    / (float(self.spatial_size) / 2)
+            features = torch.cat([normalized_coords, features], dim=1)
+
+        x = ME.SparseTensor(coordinates=input_tensor[:, :4].int(),
+                            features=features.float())
+        # Encoder
+        encoderOutput = self.encoder(x)
+        encoderTensors = encoderOutput['encoderTensors']
+        finalTensor = encoderOutput['finalTensor']
+
+        z = self.pool(finalTensor)
+        latent = self.final_layer(z)
+
+        return latent.F

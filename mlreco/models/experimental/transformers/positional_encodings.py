@@ -13,6 +13,7 @@ def get_normalized_coordinates(coords, spatial_size):
     return normalized_coords
 
 class FourierEmbeddings(nn.Module):
+    
 
     def __init__(self, cfg, name='fourier_embeddings'):
         super(FourierEmbeddings, self).__init__()
