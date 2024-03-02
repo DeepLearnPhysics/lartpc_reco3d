@@ -616,7 +616,7 @@ class AnaToolsManager:
             self.csv_writers = {}
 
         for script_name, fname_to_update_list in ana_output.items():
-            append  = self.scripts[script_name]['logger'].get('append', False)
+            append  = self.scripts[script_name].get('append', False)
             filenames = list(fname_to_update_list.keys())
             if len(filenames) != len(set(filenames)):
                 msg = f'Duplicate filenames: {str(filenames)} in {script_name} '\

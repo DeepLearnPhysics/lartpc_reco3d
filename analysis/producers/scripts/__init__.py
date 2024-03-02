@@ -4,3 +4,4 @@ from .log_events import event_data
 from .dump_info import reconstruct_images_t2r, reconstruct_images_r2t, reconstruct_images
 from .select_particles import run_bidirectional_particles
 from .colinear_tracks import select_particle_pairs
+from .pid_metrics import pid_metrics
