@@ -78,6 +78,7 @@ class TransformerEncoderLayer(nn.Module):
     def forward(self, x):
 
         x = self.attention(x)
+        self._alpha = self.attention._alpha
         out = self.ffn(x)
         return out
 
@@ -94,6 +95,7 @@ class MultiHeadAttention(nn.Module):
         self.d_qk = d_qk
         self.d_v = d_v
         self.T = num_output ** 0.5
+        self._alpha = None # Placeholder for Attention Map
         
         if norm_layer == 'layer_norm':
             self.norm = nn.LayerNorm(num_output)
@@ -127,6 +129,7 @@ class MultiHeadAttention(nn.Module):
         
         a = torch.einsum('ikb,jkb->ijb', q, k)
         attention = F.softmax(a / self.T, dim=1)
+        self._alpha = attention
         v = torch.einsum('bih,ijh->bjh', attention, v).contiguous()
         v = v.view(-1, self.num_heads * self.d_v)
         out = self.W_o(v)

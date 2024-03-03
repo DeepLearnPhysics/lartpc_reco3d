@@ -54,6 +54,7 @@ class VanillaTransformer(nn.Module):
         self.use_bias = use_bias
         self.node_classes = node_classes
         
+
     def forward(self, x, edge_index=None, edge_attr=None, xbatch=None):
         """Forward pass of the model.
 
@@ -67,11 +68,21 @@ class VanillaTransformer(nn.Module):
         out : torch.Tensor
             Output tensor of shape (N, num_output)
         """
+
         node_features = x
-        for layer in self.tf_layers:
-            x = layer(x)
+        
+        output = []
+        
+        for bidx in xbatch.unique():
+            mask = xbatch == bidx
+            node_input = x[mask]
+            for layer in self.tf_layers:
+                node_input = layer(node_input)
+            output.append(node_input)
+                
+        output = torch.cat(output, dim=0)
             
-        node_pred = self.node_predictor(x)
+        node_pred = self.node_predictor(output)
         edge_pred = edge_attr
             
         res = {
@@ -160,12 +171,13 @@ class EdgeTransformer(nn.Module):
         self.tf_layers = nn.ModuleList([])
         for i in range(self.num_layers):
             num_input = self.num_input if i == 0 else self.num_output
+            edge_num_input = self.edge_num_input if i == 0 else self.num_output
             self.tf_layers.append(
                 GraphTransformerEncoderLayer(num_input,
                         self.num_output,
                         self.num_heads,
                         self.num_hidden,
-                        edge_num_input=self.edge_num_input,
+                        edge_num_input=edge_num_input,
                         leakiness=self.leakiness,
                         dropout=self.dropout,
                         norm_layer=self.norm_layer,
@@ -182,6 +194,7 @@ class EdgeTransformer(nn.Module):
                              num_layers=6, 
                              num_hidden=128,
                              dropout=0.0, 
+                             leakiness=0.0,
                              activation='relu', 
                              norm_layer='batch_norm',
                              use_bias=False,
@@ -194,6 +207,7 @@ class EdgeTransformer(nn.Module):
         self.num_layers = num_layers
         self.num_heads = num_heads
         self.num_hidden = num_hidden
+        self.leakiness = leakiness
         self.dropout = dropout
         self.activation = activation
         self.norm_layer = norm_layer

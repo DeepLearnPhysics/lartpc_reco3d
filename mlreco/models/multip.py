@@ -54,6 +54,8 @@ class ParticleNet(nn.Module):
         # Construct the GNN
         self.gnn_model = gnn_model_construct(cfg[name])
         
+        print(f"Number of parameters in model: {sum(p.numel() for p in self.parameters())}")
+        
         
     def process_model_config(self, cfg, name='particlenet'):
         

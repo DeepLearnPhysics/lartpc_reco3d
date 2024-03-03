@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 
 from torch_geometric.nn import MessagePassing
@@ -24,7 +25,7 @@ def _get_act_layer(name):
     return act_dict[name]
 
 
-class SparseMultiHeadAttention(nn.Module):
+class SparseMultiHeadAttention(MessagePassing):
     """
     A multi-head attention layer that limits the
     attention map with the input graph connectivity information.
@@ -44,7 +45,7 @@ class SparseMultiHeadAttention(nn.Module):
         
         self.num_heads = num_heads
         self.dropout = dropout
-        self.norm_fn = _get_norm_layer(norm)(h_in_dim)
+        self.norm_fn = _get_norm_layer(norm)
         self.residual = residual
         self.use_bias = use_bias
         self.concat_attn = concat_attn
