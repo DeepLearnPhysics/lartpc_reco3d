@@ -3,11 +3,10 @@ import torch.nn as nn
 import numpy as np
 import MinkowskiEngine as ME
 
-from pprint import pprint
+
 from mlreco.models.experimental.cluster.transformer_spice import TransformerSPICE
 from mlreco.models.experimental.cluster.criterion import *
 from mlreco.utils.globals import *
-from scipy.optimize import linear_sum_assignment
 from collections import defaultdict
 
 class Mask3DModel(nn.Module):

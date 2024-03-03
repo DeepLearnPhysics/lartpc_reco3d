@@ -80,12 +80,14 @@ class NodeTypeLoss(torch.nn.Module):
                 continue
 
             # Get the list of batch ids, loop over individual batches
-            batches = types[i][:, self.batch_col]
+            batches = types[i][:, self.batch_col].long()
             nbatches = len(batches.unique())
             for j in range(nbatches):
-
+                
+                mask = batches == j
                 # Narrow down the tensor to the rows in the batch
-                labels = types[i][batches==j]
+                print(types[i])
+                labels = types[i][types[i][:, 0] == j]
 
                 # Get the class labels from the specified column
                 node_pred = out['node_pred'][i][j]

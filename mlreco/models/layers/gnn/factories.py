@@ -113,6 +113,8 @@ def gnn_model_dict():
     """
 
     from .message_passing import agnnconv, econv, gatconv, meta, nnconv, nnconv_elu, nnconv_old
+    
+    from mlreco.models.experimental.transformers.models import VanillaTransformer, SPTransformer, EdgeTransformer
 
     models = {
         "agnnconv"      : agnnconv.AGNNConvModel,
@@ -121,7 +123,10 @@ def gnn_model_dict():
         "nnconv"        : nnconv.NNConvModel,
         "meta"          : meta.MetaLayerModel,
         "nnconv_elu"    : nnconv_elu.NNConvModel,
-        "nnconv_old"    : nnconv_old.NNConvModel
+        "nnconv_old"    : nnconv_old.NNConvModel,
+        'transformer'   : VanillaTransformer,
+        'sp_tformer'    : SPTransformer,
+        'edge_tformer'  : EdgeTransformer
     }
 
     return models

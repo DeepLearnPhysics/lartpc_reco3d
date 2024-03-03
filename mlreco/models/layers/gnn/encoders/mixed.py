@@ -1,5 +1,5 @@
 import torch
-import torch.nn
+import torch.nn as nn
 from ..factories import node_encoder_construct, edge_encoder_construct
 
 

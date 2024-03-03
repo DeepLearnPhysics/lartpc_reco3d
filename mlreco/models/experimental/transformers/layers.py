@@ -53,42 +53,33 @@ class TransformerEncoderLayer(nn.Module):
     Transformer module (attention mechanism) that takes (N, F_in) feature
     tensors to (N, F_out) feature tensor. 
     '''
-    def __init__(self, num_input, num_output, num_hidden=128, num_layers=5, 
-                 d_qk=128, d_v=128, num_heads=8, leakiness=0.0, dropout=True, 
-                 name='attention_net', norm_layer='layer_norm'):
+    def __init__(self, num_input, num_output, 
+                 num_hidden=128, 
+                 num_heads=8, 
+                 leakiness=0.0, 
+                 dropout=True, 
+                 norm_layer='layer_norm'):
         super(TransformerEncoderLayer, self).__init__()
-
-        self.ma_layers = nn.ModuleList()
-        self.ffn_layers = nn.ModuleList()
-
-        self.num_layers = num_layers
-
-        for i in range(num_layers):
-            self.ma_layers.append(
-                MultiHeadAttention(num_input, d_qk, d_v, num_hidden, 
-                                   num_heads=num_heads, dropout=dropout,
+            
+        assert num_hidden % num_heads == 0, 'num_hidden should be divisible by num_heads'
+        
+        dim_kqv = num_output // num_heads
+        
+        self.attention = MultiHeadAttention(num_input, dim_kqv, dim_kqv, num_output,
+                                            num_heads=num_heads, 
+                                            dropout=dropout,
+                                            norm_layer=norm_layer)
+        
+        self.ffn = PositionWiseFFN(num_output, num_output, num_hidden,
+                                   leakiness=leakiness,
+                                   dropout=dropout,
                                    norm_layer=norm_layer)
-            )
-            self.ffn_layers.append(
-                PositionWiseFFN(num_hidden, num_hidden, num_hidden, 
-                                leakiness=leakiness, dropout=dropout,
-                                norm_layer=norm_layer)
-            )
-            num_input = num_hidden
-
-        self.softplus = nn.Softplus()
-
+        
     def forward(self, x):
 
-        for i in range(self.num_layers):
-            # print(x.shape)
-            x = self.ma_layers[i](x)
-            # print(x.shape)
-            x = self.ffn_layers[i](x)
-            # print(x.shape)
-            
-        x = self.softplus(x)
-        return x
+        x = self.attention(x)
+        out = self.ffn(x)
+        return out
 
 
 class MultiHeadAttention(nn.Module):
@@ -128,17 +119,16 @@ class MultiHeadAttention(nn.Module):
         
     def forward(self, x):
         
-        num_output, num_heads = self.num_output, self.num_heads
         residual = self.residual(x)
         
-        q = self.W_q(x).view(-1, self.d_qk, num_heads)
-        k = self.W_k(x).view(-1, self.d_qk, num_heads)
-        v = self.W_v(x).view(-1, self.d_v, num_heads)
+        q = self.W_q(x).view(-1, self.d_qk, self.num_heads)
+        k = self.W_k(x).view(-1, self.d_qk, self.num_heads)
+        v = self.W_v(x).view(-1, self.d_v, self.num_heads)
         
         a = torch.einsum('ikb,jkb->ijb', q, k)
         attention = F.softmax(a / self.T, dim=1)
         v = torch.einsum('bih,ijh->bjh', attention, v).contiguous()
-        v = v.view(-1, num_heads * self.d_v)
+        v = v.view(-1, self.num_heads * self.d_v)
         out = self.W_o(v)
         
         out += residual
