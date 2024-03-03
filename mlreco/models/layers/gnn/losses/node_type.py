@@ -80,14 +80,12 @@ class NodeTypeLoss(torch.nn.Module):
                 continue
 
             # Get the list of batch ids, loop over individual batches
-            batches = types[i][:, self.batch_col].long()
+            batches = types[i][:, self.batch_col]
             nbatches = len(batches.unique())
             for j in range(nbatches):
-                
-                mask = batches == j
+
                 # Narrow down the tensor to the rows in the batch
-                print(types[i])
-                labels = types[i][types[i][:, 0] == j]
+                labels = types[i][batches==j]
 
                 # Get the class labels from the specified column
                 node_pred = out['node_pred'][i][j]
@@ -95,6 +93,11 @@ class NodeTypeLoss(torch.nn.Module):
                     continue
                 clusts = out['clusts'][i][j]
                 node_assn = get_cluster_label(labels, clusts, column=self.target_col)
+                
+                if node_assn.max() >= node_pred.shape[1]:
+                    msg = f'Node class label {int(node_assn.max())} exceeds the '\
+                        f'number of classes = {node_pred.shape[1]} in the prediction.'
+                    raise ValueError(msg)
 
                 # Do not apply loss to nodes labeled -1 (unknown class)
                 valid_mask = node_assn > -1

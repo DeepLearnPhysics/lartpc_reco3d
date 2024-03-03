@@ -277,12 +277,6 @@ class ParticleNet(nn.Module):
         # Unwrapped per image
         result['node_pred'] = [[out['node_pred'][0][b] for b in cbids]]
         result['edge_pred'] = [[out['edge_pred'][0][b] for b in ebids]]
-        
-        print(out['node_pred'][0].shape)
-        print(out['edge_pred'][0].shape)
-        
-        print(len(result['node_pred'][0]))
-        print(len(result['edge_pred'][0]))
 
         return result
     
@@ -322,6 +316,7 @@ class ParticleNetLoss(torch.nn.modules.loss._Loss):
 
         # Apply edge and node losses, if instantiated
         loss = {}
+
         if self.apply_node_loss:
             if node_label is None:
                 node_label = clust_label
