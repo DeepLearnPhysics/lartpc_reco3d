@@ -223,7 +223,7 @@ class GraphSPICE(nn.Module):
         fragments = self._gspice_fragment_manager(filtered_input, input[0], filtered_semantic)
         frags['filtered_input'] = [filtered_input]
         frags['fragment_batch_ids'] = [np.array(fragments[1])]
-        frags['fragment_clusts'] = [np.array(fragments[0])]
+        frags['fragment_clusts'] = [np.asarray(fragments[0], dtype=object)]
         frags['fragment_seg'] = [np.array(fragments[2]).astype(int)]
         
         return frags
