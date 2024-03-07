@@ -653,6 +653,14 @@ class InteractionLogger(AnalysisLogger):
         return out
     
     @staticmethod
+    @tag('reco')
+    def satisfiability(ia):
+        out = {'satisfiability': -1.0}
+        if ia is not None:
+            out['satisfiability'] = ia.satisfiability
+        return out
+    
+    @staticmethod
     def is_principal_match(ia):
         out = {'is_principal_match': False}
         if ia is not None:
