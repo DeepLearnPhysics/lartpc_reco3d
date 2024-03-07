@@ -1,7 +1,7 @@
-from . import reconstruction, pmt, crt, trigger, evaluation
+from . import reconstruction, pmt, crt, trigger, evaluation, csp
 
 POST_PROCESSOR_DICT = {}
-for module in [reconstruction, pmt, crt, trigger, evaluation]:
+for module in [reconstruction, pmt, crt, csp, trigger, evaluation]:
     for processor in dir(module):
         if 'Processor' in processor:
             cls = getattr(module, processor)

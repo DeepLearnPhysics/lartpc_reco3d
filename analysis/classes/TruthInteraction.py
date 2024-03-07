@@ -342,6 +342,10 @@ class TruthInteraction(Interaction):
     def __str__(self):
         msg = super(TruthInteraction, self).__str__()
         return 'Truth'+msg
+    
+    @property
+    def satisfiability(self):
+        raise ValueError("Satisfiability is a reco quantity and is not defined for TruthInteractions")
 
 
 # ------------------------------Helper Functions---------------------------

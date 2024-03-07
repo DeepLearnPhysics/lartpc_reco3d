@@ -77,7 +77,8 @@ class Interaction:
                  is_fiducial: bool = False,
                  is_ccrosser: bool = False,
                  coffset: float = -np.inf,
-                 units: str = 'px', **kwargs):
+                 units: str = 'px', 
+                 satisfiability: float = -1., **kwargs):
 
         # Initialize attributes
         self.id           = int(interaction_id)
@@ -136,6 +137,9 @@ class Interaction:
         self.crthit_matched = crthit_matched
         self.crthit_matched_particle_id = crthit_matched_particle_id
         self.crthit_id = crthit_id
+        
+        # CST quantities
+        self._satisfiability = satisfiability
 
     @property
     def size(self):
@@ -342,6 +346,14 @@ class Interaction:
     @property
     def units(self):
         return self._units
+    
+    @property
+    def satisfiability(self):
+        return self._satisfiability
+    
+    @satisfiability.setter
+    def satisfiability(self, other):
+        self._satisfiability = other
 
 
 # ------------------------------Helper Functions---------------------------
