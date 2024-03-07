@@ -3,6 +3,7 @@ from abc import abstractmethod
 from mlreco.utils.globals import *
 from .utils import select_valid_domains
 
+import networkx as nx
 
 def constraints_dict(name):
     cst_dict = {
@@ -138,7 +139,8 @@ class EMVertexConstraint(ParticleConstraint):
             return out
         dists = np.linalg.norm(particle.points - interaction.vertex, axis=1)
         # Check if particle point cloud is separated from vertex:
-        if dists.any() >= self.r:
+        print(particle, dists.min(), dists.all())
+        if (dists >= self.r).all():
             out[ELEC_PID] = False
             out[PHOT_PID] = True
 
