@@ -139,7 +139,6 @@ class EMVertexConstraint(ParticleConstraint):
             return out
         dists = np.linalg.norm(particle.points - interaction.vertex, axis=1)
         # Check if particle point cloud is separated from vertex:
-        print(particle, dists.min(), dists.all())
         if (dists >= self.r).all():
             out[ELEC_PID] = False
             out[PHOT_PID] = True
