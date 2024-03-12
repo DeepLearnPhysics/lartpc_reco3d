@@ -48,5 +48,6 @@ class CSATProcessor(PostProcessor):
                 p.is_primary = solver.get_assignment('is_primary', p.id)
             
             ia.satisfiability = solver.satisfiability
+            ia._update_particle_info()
                 
         return {}, {}

@@ -267,6 +267,7 @@ class Interaction:
         self._num_particles = np.sum(self._particle_counts)
         self._num_primaries = np.sum(self._primary_counts)
 
+
     @property
     def particle_ids(self):
         return self._particle_ids

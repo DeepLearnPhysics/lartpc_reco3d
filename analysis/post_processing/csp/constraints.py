@@ -1,6 +1,8 @@
 import numpy as np
 from abc import abstractmethod
+
 from mlreco.utils.globals import *
+from analysis.classes import Particle, TruthParticle
 from .utils import select_valid_domains
 
 import networkx as nx
@@ -13,6 +15,7 @@ def constraints_dict(name):
         'particle_score_constraint': ParticleScoreConstraint,
         # 'pid_score_constraint': PIDScoreConstraint,
         'primary_constraint': PrimaryConstraint,
+        'primary_energy_constraint': PrimaryEnergyConstraint,
         'muon_electron_constraint': MuonElectronConstraint
     }
     return cst_dict[name]
@@ -88,6 +91,17 @@ class ParticleSemanticConstraint(ParticleConstraint):
             pass
         return out
     
+    def __repr__(self):
+        return (
+            'ParticleSemanticConstraint('
+            'scope={}, '
+            'var_name={}, '
+            'domain_size={}, '
+            'priority={}'
+            ')'.format(self.scope, self.var_name, self.domain_size, 
+                       self.priority)
+        )
+    
     
 class PrimarySemanticConstraint(ParticleConstraint):
     
@@ -96,6 +110,7 @@ class PrimarySemanticConstraint(ParticleConstraint):
         super(PrimarySemanticConstraint, self).__init__(scope, priority)
         self.domain_size = domain_size
         self.var_name = var_name
+        self.threshold = threshold
         
     def __call__(self, particle, *args, **kwargs):
         
@@ -147,14 +162,14 @@ class EMVertexConstraint(ParticleConstraint):
     
     def __repr__(self):
         return (
-            'PrimarySemanticConstraint('
+            'EMVertexConstraint('
             'scope={}, '
             'var_name={}, '
             'domain_size={}, '
             'priority={}, '
-            'threshold={}'
+            'r={}'
             ')'.format(self.scope, self.var_name, self.domain_size, 
-                       self.priority, self.threshold)
+                       self.priority, self.r)
         )
     
     
@@ -176,8 +191,10 @@ class ParticleScoreConstraint(ParticleConstraint):
     def __call__(self, particle, interaction=None):
         
         out = np.ones(self.domain_size).astype(bool)
-
-        if particle.pid_scores[PROT_PID] >= self.proton_threshold:
+        
+        if particle.semantic_type != 1:
+            return out
+        elif particle.pid_scores[PROT_PID] >= self.proton_threshold:
             out = np.zeros(self.domain_size).astype(bool)
             out[PROT_PID] = True
             return out
@@ -206,6 +223,51 @@ class ParticleScoreConstraint(ParticleConstraint):
                        self.proton_threshold, self.muon_threshold, 
                        self.pion_threshold)
         )
+        
+        
+class PrimaryEnergyConstraint(ParticleConstraint):
+    
+    def __init__(self, ke_thresholds, 
+                 scope='particle', var_name='primary_scores', 
+                 domain_size=2, priority=0):
+        super(PrimaryEnergyConstraint, self).__init__(scope, priority)
+        self.domain_size = domain_size
+        self.var_name = var_name
+        self.ke_thresholds = np.full(5, -np.inf).astype(float)
+        
+        # Store the thresholds in a dictionary
+        if np.isscalar(ke_thresholds):
+            self.ke_thresholds = np.full(5, ke_thresholds).astype(float)
+        elif type(ke_thresholds) == dict:
+            if 'all' in ke_thresholds:
+                self.ke_thresholds = np.full(5, ke_thresholds['all']).astype(float)
+                ke_thresholds.pop('all')
+            for pid in ke_thresholds:
+                self.ke_thresholds[pid] = ke_thresholds[pid]
+        else:
+            raise ValueError(f'Thresholds must be a scalar or an array of shape ({domain_size}, ).')
+        
+    def __call__(self, particle, interaction=None):
+        
+        out = np.ones(self.domain_size).astype(bool)
+        
+        if particle.ke < self.ke_thresholds[particle.pid]:
+            out[1] = False
+            out[0] = True
+            
+        return out
+    
+    def __repr__(self):
+        return (
+            'PrimaryEnergyConstraint('
+            'scope={}, '
+            'var_name={}, '
+            'domain_size={}, '
+            'thresholds={}'
+            ')'.format(self.scope, self.var_name, self.domain_size, 
+                       str(self.ke_thresholds))
+        )
+        
     
 # class PIDScoreConstraint(ParticleConstraint):
 #     def __init__(self, scope='particle', var_name='pid_scores', 

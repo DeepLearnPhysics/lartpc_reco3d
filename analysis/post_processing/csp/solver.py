@@ -30,13 +30,15 @@ class CSAT:
         self.particle_ids  = [p.id for p in self.particles]
         
         self.pid_to_index  = {p.id : i for i, p in enumerate(self.particles)}
+        self.index_to_pid  = {i : p.id for i, p in enumerate(self.particles)}
         
         self.num_particles = len(self.particles)
         
         self._constraints  = {}
-        self._assignments  = {}
+        self._solutions  = {}
         
         self._consistencies      = {}
+        self._satisfied          = {}
         self._num_satisfied      = {}
         self._scores             = {}
         self._domains            = {}
@@ -130,7 +132,7 @@ class CSAT:
         self._consistencies[var_name][:, cst_id, :] = filter_map
             
                 
-    def solve(self, min_consistency=None):
+    def solve(self, min_consistency=None, debug=False):
         
         self._process_constraints()
         
@@ -142,18 +144,27 @@ class CSAT:
             self._num_satisfied[var_name] = index
             
             values = self._scores[var_name] * out.astype(int)
-            self._assignments[var_name] = values.max(axis=1)
-            self._assignments[self._PVAR_NAMES[var_name]] = values.argmax(axis=1)
+            self._solutions[var_name] = values.max(axis=1)
+            self._solutions[self._PVAR_NAMES[var_name]] = values.argmax(axis=1)
+            
+        for var_name, nsat in self._num_satisfied.items():
+            if var_name not in self._satisfied:
+                self._satisfied[var_name] = defaultdict(list)
+            for i, part_id in self.index_to_pid.items():
+                for j in range(nsat[i]):
+                    cst_name = self._constraints[var_name][j].__repr__()
+                    self._satisfied[var_name][part_id].append(cst_name)
+                
             
     def get_assignment(self, var_name, pid):
         i = self.pid_to_index[pid]
-        return self._assignments[var_name][i]
+        return self._solutions[var_name][i]
     
     def get_satisfiability(self, var_name=None):
         if var_name not in self._PVAR_NAMES:
             raise ValueError(f"Variable name {var_name} not in list of particle variable names")
         N = self._num_satisfied[var_name] / self._num_constraints[var_name]
-        score = N * self.assignments[var_name]
+        score = N * self.solutions[var_name]
         return score.mean()
     
     @property
@@ -173,8 +184,8 @@ class CSAT:
         return self._constraints
     
     @property
-    def assignments(self):
-        return self._assignments
+    def solutions(self):
+        return self._solutions
     
     @property
     def consistencies(self):
