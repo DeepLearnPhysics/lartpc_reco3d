@@ -20,7 +20,8 @@ def _get_norm_layer(name):
 def _get_act_layer(name):
     act_dict = {
         'relu': nn.ReLU,
-        'leaky_relu': nn.LeakyReLU
+        'leaky_relu': nn.LeakyReLU,
+        'gelu': nn.GeLU
     }
     return act_dict[name]
 

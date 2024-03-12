@@ -178,10 +178,12 @@ class EdgeTransformer(nn.Module):
                         self.num_heads,
                         self.num_hidden,
                         edge_num_input=edge_num_input,
-                        leakiness=self.leakiness,
+                        # leakiness=self.leakiness,
                         dropout=self.dropout,
                         norm_layer=self.norm_layer,
-                        edge_include_mode=self.edge_include_mode))
+                        edge_include_mode=self.edge_include_mode,
+                        act_layer=self.act_layer,
+                        act_kwargs=self.act_kwargs))
             
         self.node_predictor = nn.Linear(self.num_output, self.node_classes)
         self.edge_predictor = nn.Linear(self.num_output, self.edge_classes)
@@ -195,7 +197,8 @@ class EdgeTransformer(nn.Module):
                              num_hidden=128,
                              dropout=0.0, 
                              leakiness=0.0,
-                             activation='relu', 
+                             act_layer='relu', 
+                             act_kwargs=None,
                              norm_layer='batch_norm',
                              use_bias=False,
                              edge_include_mode='prod',
@@ -209,7 +212,9 @@ class EdgeTransformer(nn.Module):
         self.num_hidden = num_hidden
         self.leakiness = leakiness
         self.dropout = dropout
-        self.activation = activation
+        self.act_layer = act_layer
+        if act_kwargs is None:
+            self.act_kwargs = {}
         self.norm_layer = norm_layer
         self.use_bias = use_bias
         self.edge_include_mode = edge_include_mode
@@ -293,9 +298,10 @@ class GraphTransformerEncoderLayer(nn.Module):
     
     def __init__(self, num_input, num_output, num_heads,
                  num_hidden, edge_num_input,
-                 leakiness=0.0,
                  dropout=0.0,
                  norm_layer='batch_norm',
+                 act_layer='relu',
+                 act_kwargs=None,
                  residual=True,
                  use_bias=False,
                  concat_attn=True,
@@ -329,15 +335,17 @@ class GraphTransformerEncoderLayer(nn.Module):
         
         self.ffn_node = PositionWiseFFN(num_output, num_output,
                                         num_hidden, 
-                                        leakiness=leakiness,
                                         dropout=dropout,
-                                        norm_layer=norm_layer)
+                                        norm_layer=norm_layer,
+                                        act_layer=act_layer,
+                                        act_kwargs=act_kwargs)
         
         self.ffn_edge = PositionWiseFFN(num_output, num_output,
                                         num_hidden, 
-                                        leakiness=leakiness,
                                         dropout=dropout,
-                                        norm_layer=norm_layer)
+                                        norm_layer=norm_layer,
+                                        act_layer=act_layer,
+                                        act_kwargs=act_kwargs)
         
         
     def forward(self, x, edge_index, edge_attr, xbatch=None):

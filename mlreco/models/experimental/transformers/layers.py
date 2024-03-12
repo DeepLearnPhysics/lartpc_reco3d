@@ -144,7 +144,8 @@ class MultiHeadAttention(nn.Module):
 class PositionWiseFFN(nn.Module):
     
     def __init__(self, num_input, num_output, num_hidden, 
-                 leakiness=0.0, dropout=True, norm_layer='layer_norm'):
+                 dropout=True, 
+                 norm_layer='layer_norm', act_layer='relu', act_kwargs=None):
         super(PositionWiseFFN, self).__init__()
         self.num_input = num_input
         self.num_output = num_output
@@ -157,7 +158,10 @@ class PositionWiseFFN(nn.Module):
             self.norm = nn.BatchNorm1d(num_output)
         else:
             raise ValueError('Normalization layer {} not recognized!'.format(norm_layer))
-        self.act = nn.LeakyReLU(negative_slope=leakiness)
+        
+        if act_kwargs is None:
+            act_kwargs = {}
+        self.act = _get_activation_fn(act_layer, **act_kwargs)
 
         self.dropout = dropout
         if self.dropout:
@@ -342,12 +346,14 @@ class FFNLayer(nn.Module):
         return self.forward_post(tgt)
 
 
-def _get_activation_fn(activation):
+def _get_activation_fn(activation, **kwargs):
     """Return an activation function given a string"""
     if activation == "relu":
         return F.relu
     if activation == "gelu":
         return F.gelu
+    if activation == 'lrelu':
+        return partial(F.leaky_relu, negative_slope=kwargs['negative_slope'])
     if activation == "glu":
         return F.glu
     raise RuntimeError(F"activation should be relu/gelu, not {activation}.")

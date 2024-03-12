@@ -4,6 +4,35 @@ import torch.nn.functional as F
 
 from mlreco.models.layers.cluster_cnn.losses.lovasz import lovasz_softmax_flat
 
+
+def classification_loss_dict(name):
+    """Loss function dictionary for classification tasks.
+
+    All loss functions assume that the inputs are of the form
+    (logits, labels), where logits is a tensor of shape (N, C) and
+    labels is a tensor of shape (N,) containing the class labels.
+    
+    Also assumes that reduction is set to 'mean' in the loss function.
+    """
+    
+    loss_dict = {
+        'cross_entropy': CrossEntropyLoss,
+        'focal': FocalLoss,
+        'dice': DiceLoss,
+        'lovasz_softmax': LovaszSoftmaxLoss,
+        'jaccard': JaccardLoss,
+        'tversky': TverskyLoss,
+        'focal_tversky': FocalTverskyLoss,
+        'log_cosh_dice': LogCoshDiceLoss,
+        'log_dice': LogDiceLoss
+    }
+    
+    constructor = loss_dict[name]
+    
+    print(f"Initialized {constructor.__name__} Loss for Classification.")
+    
+    return constructor
+
 class ClassificationLoss(nn.Module):
     """
     Abstract base class for all classification loss functions.
@@ -72,7 +101,7 @@ class CrossEntropyLoss(ClassificationLoss):
     
     def __init__(self, **kwargs):
         super(CrossEntropyLoss, self).__init__(**kwargs)
-        self.w = 1.0
+        self.w = 0.0
         
     def regularization(self, logits, labels):
         """

@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
+from mlreco.utils.globals import *
+from mlreco.utils.gnn.cluster import form_clusters, get_cluster_label
+from mlreco.utils.gnn.data import split_clusts
 
 # From Pytorch Geometric Examples for PointNet:
 # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pointnet2_classification.py
@@ -85,8 +88,8 @@ class PointNet(torch.nn.Module):
         self.sa3_module = GlobalSAModule(MLP(self.mlp_specs_glob))
         self.mlp = MLP(self.mlp_specs_final, dropout=self.dropout, norm=None)
 
-    def forward(self, data):
-        sa0_out = (data.x, data.pos, data.batch)
+    def forward(self, x, pos, batch):
+        sa0_out = (x, pos, batch)
 
         out = sa0_out
 
@@ -106,6 +109,59 @@ class PointNetEncoder(torch.nn.Module):
         self.net = PointNet(cfg)
         self.latent_size = self.net.latent_size
 
-    def forward(self, batch):
-        out = self.net(batch)
+    def forward(self, input_tensor, startpoints=None):
+        pos = input_tensor[:, COORD_COLS]
+        batch = input_tensor[:, BATCH_COL].long()
+        x = input_tensor[:, VALUE_COL].view(-1, 1)
+        
+        out = self.net(x, pos, batch)
         return out
+    
+    
+class PointNetMultiParticleEncoder(nn.Module):
+    
+    def __init__(self, cfg, name='pointnet_multi_encoder'):
+        super(PointNetMultiParticleEncoder, self).__init__()
+        self.encoder = PointNetEncoder(cfg)
+        self.latent_size = self.encoder.latent_size
+        self.split_col = GROUP_COL
+        self.batch_col = BATCH_COL
+        self.target_col = PID_COL
+        self.invalid_id = -1
+        
+    def split_input(self, point_cloud, clusts=None):
+        point_cloud_cpu  = point_cloud.detach().cpu().numpy()
+        batches, bcounts = np.unique(point_cloud_cpu[:,self.batch_col], return_counts=True)
+        if clusts is None:
+            clusts = form_clusters(point_cloud_cpu, column=self.split_col)
+        if not len(clusts):
+            return point_cloud, [np.array([]) for _ in batches], []
+
+        if self.skip_invalid:
+            target_ids = get_cluster_label(point_cloud_cpu, clusts, column=self.target_col)
+            clusts = [c for i, c in enumerate(clusts) if target_ids[i] != self.invalid_id]
+            if not len(clusts):
+                return point_cloud, [np.array([]) for _ in batches], []
+
+        split_point_cloud = point_cloud.clone()
+        split_point_cloud[:, self.batch_col] = -1
+        for i, c in enumerate(clusts):
+            split_point_cloud[c, self.batch_col] = i
+        
+        batch_ids = get_cluster_label(point_cloud_cpu, clusts, column=self.batch_col)
+        clusts_split, cbids = split_clusts(clusts, batch_ids, batches, bcounts)
+
+        return split_point_cloud[split_point_cloud[:,self.batch_col] > -1], clusts_split, cbids
+        
+    def forward(self, point_cloud, clusts):
+        
+        res = {}
+        
+        out, clusts_split, cbids = self.split_input(point_cloud, clusts)
+        res['clusts'] = [clusts_split]
+
+        out = self.encoder(out)
+        out = self.final_layer(out)
+        res['logits'] = [[out[b] for b in cbids]]
+        
+        return res
