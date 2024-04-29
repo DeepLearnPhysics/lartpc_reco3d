@@ -1,6 +1,5 @@
 import numpy as np
 from typing import List
-from larcv import larcv
 
 from mlreco.utils.globals import (BATCH_COL,
                                   COORD_COLS,
@@ -165,6 +164,7 @@ class FragmentBuilder(DataBuilder):
             list of true TruthParticle instances of length equal to the
             batch size.
         """
+        from larcv import larcv
 
         out = []
         image_index     = data['index'][entry]

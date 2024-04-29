@@ -1,5 +1,4 @@
 import numpy as np
-from larcv import larcv
 import sys
 
 from typing import List

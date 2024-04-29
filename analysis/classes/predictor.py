@@ -4,7 +4,6 @@ import os
 import time
 from collections import OrderedDict
 
-from mlreco.utils.cluster.cluster_graph_constructor import ClusterGraphConstructor
 from mlreco.utils.ppn import uresnet_ppn_type_point_selector
 from mlreco.utils.metrics import unique_label
 
@@ -147,6 +146,7 @@ class FullChainPredictor:
             - subgraph: same graph in torch_geometric.Data format.
         '''
         import warnings
+        from mlreco.utils.cluster.cluster_graph_constructor import ClusterGraphConstructor
         warnings.filterwarnings('ignore')
 
         graph = self.result['graph'][0]

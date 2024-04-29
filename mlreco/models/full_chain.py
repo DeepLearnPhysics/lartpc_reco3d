@@ -432,7 +432,7 @@ class FullChain(FullChainGNN):
         if self.enable_cnn_clust or self.enable_dbscan:
             cnn_result.update({'segment_label_tmp': [semantic_labels] })
             if label_clustering is not None:
-                if 'input_rescaled' in cnn_result:
+                if len(label_clustering[0]) == len(input[0]):
                     label_clustering[0][:, VALUE_COL] = input[0][:, VALUE_COL]
                 cnn_result.update({'cluster_label_adapted': label_clustering })
 

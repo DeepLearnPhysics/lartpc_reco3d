@@ -1,11 +1,16 @@
 import os
+import sys
 import yaml
 import h5py
 import inspect
 import numpy as np
 from collections import defaultdict
-from larcv import larcv
 from analysis import classes as analysis
+
+try:
+    from larcv import larcv
+except:
+    print("Failed to import larcv, cannot store those products.")
 
 from mlreco.utils.globals import SHAPE_LABELS, PID_LABELS, NU_CURR_TYPE, NU_INT_TYPE
 
@@ -32,14 +37,15 @@ class HDF5Writer:
     ANA_FIXED_LENGTH = [
         'start_point', 'end_point', 'start_dir', 'truth_start_dir', 'end_dir',
         'start_position', 'end_position', 'vertex', 'truth_vertex', 'momentum',
-        'truth_momentum', 'pid_scores', 'primary_scores', 'particle_counts',
-        'primary_counts'
+        'truth_momentum', 'truth_end_momentum', 'pid_scores', 'primary_scores',
+        'particle_counts', 'primary_counts'
     ]
 
     # Object attributes that do not need to be stored to HDF5
     LARCV_SKIP_ATTRS = [
-        'add_trajectory_point', 'dump', 'momentum', 'boundingbox_2d', 'boundingbox_3d',
-        *[k + a for k in ['', 'parent_', 'ancestor_'] for a in ['x', 'y', 'z', 't']]
+        'add_trajectory_point', 'dump', 'momentum', 'end_momentum', 'boundingbox_2d',
+        'traj_x', 'traj_y', 'traj_z', 'traj_t', 'traj_px', 'traj_py', 'traj_pz', 'traj_e',
+        'boundingbox_3d', *[k + a for k in ['', 'parent_', 'ancestor_'] for a in ['x', 'y', 'z', 't']]
     ]
 
     ANA_SKIP_ATTRS = [
@@ -49,10 +55,6 @@ class HDF5Writer:
     ]
 
     SKIP_ATTRS = {
-        larcv.Particle: LARCV_SKIP_ATTRS,
-        larcv.Neutrino: LARCV_SKIP_ATTRS,
-        larcv.Flash:    ['wireCenters', 'wireWidths'],
-        larcv.CRTHit:   ['feb_id', 'pesmap'],
         analysis.ParticleFragment:      ANA_SKIP_ATTRS,
         analysis.TruthParticleFragment: ANA_SKIP_ATTRS,
         analysis.Particle:              ANA_SKIP_ATTRS,
@@ -60,8 +62,15 @@ class HDF5Writer:
         analysis.Interaction:           ANA_SKIP_ATTRS + ['index', 'truth_index', 'sed_index'],
         analysis.TruthInteraction:      ANA_SKIP_ATTRS + ['index', 'truth_index', 'sed_index']
     }
-    if hasattr(larcv, 'Trigger'): # TMP until a new singularity
-        SKIP_ATTRS.update({larcv.Trigger:  ['clear']})
+    if 'larcv' in sys.modules:
+        SKIP_ATTRS.update({
+            larcv.Particle: LARCV_SKIP_ATTRS,
+            larcv.Neutrino: LARCV_SKIP_ATTRS,
+            larcv.Flash:    ['wireCenters', 'wireWidths'],
+            larcv.CRTHit:   ['feb_id', 'pesmap']
+        })
+        if hasattr(larcv, 'Trigger'): # TMP until a new singularity
+            SKIP_ATTRS.update({larcv.Trigger:  ['clear']})
 
     # Output with default types. TODO: move this, make it not name-dependant
     DEFAULT_OBJS = {
@@ -70,15 +79,20 @@ class HDF5Writer:
         'interactions':       analysis.Interaction(),
         'truth_interactions': analysis.TruthInteraction(),
     }
+    if 'larcv' in sys.modules:
+        DEFAULT_OBJS['truth_particles'] = analysis.TruthParticle(particle_asis=larcv.Particle())
+        DEFAULT_OBJS['truth_interactions'] = analysis.TruthInteraction(neutrino=larcv.Neutrino())
 
     # Outputs that have a fixed number of tensors. #TODO: Inherit from unwrap rules
     TENSOR_LISTS = ['encoderTensors', 'decoderTensors', 'ppn_masks', 'ppn_layers', 'ppn_coords']
 
     # List of recognized objects
     DATA_OBJS  = tuple(list(SKIP_ATTRS.keys()))
-    LARCV_OBJS = [larcv.Particle, larcv.Neutrino, larcv.Flash, larcv.CRTHit]
-    if hasattr(larcv, 'Trigger'): # TMP until a new singularity
-        LARCV_OBJS.append(larcv.Trigger)
+    LARCV_OBJS = []
+    if 'larcv' in sys.modules:
+        LARCV_OBJS = [larcv.Particle, larcv.Neutrino, larcv.Flash, larcv.CRTHit]
+        if hasattr(larcv, 'Trigger'): # TMP until a new singularity
+            LARCV_OBJS.append(larcv.Trigger)
     LARCV_OBJS = tuple(LARCV_OBJS)
 
     def __init__(self,
@@ -210,6 +224,9 @@ class HDF5Writer:
                     ref_obj = blob[key][ref_id][0]
                 elif key in self.DEFAULT_OBJS.keys():
                     ref_obj = self.DEFAULT_OBJS[key]
+                elif isinstance(blob[key][0], np.ndarray):
+                    ref_id = 0
+                    ref_obj = blob[key][ref_id]
                 else:
                     msg = f'Cannot infer the dtype of a list of empty lists ({key}) and hence cannot initialize the output HDF5 file'
                     raise AssertionError(msg) # TODO: In this case, fall back on a default dtype specified elsewhere
@@ -393,6 +410,8 @@ class HDF5Writer:
                 shape, maxshape = [(0, w), (None, w)] if w else [(0,), (None,)]
                 subgroup.create_dataset('elements', shape, maxshape=maxshape, dtype=val['dtype'])
                 subgroup.create_dataset('index', (0,), maxshape=(None,), dtype=ref_dtype)
+
+            group[key].attrs['category'] = val['category']
 
         out_file.create_dataset('events', (0,), maxshape=(None,), dtype=self.event_dtype)
 

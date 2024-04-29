@@ -1,5 +1,4 @@
 import numpy as np
-from larcv import larcv
 from typing import Counter, List, Union
 
 from . import Particle
@@ -22,6 +21,8 @@ class TruthParticle(Particle):
     ----------
     truth_id : int
         Index of the particle in the input list of larcv.Particle
+    truth_interaction_id : int
+        True interaction ID, as stored in the MC truth
     depositions_MeV : np.ndarray
         (N) Array of energy deposition values for each reconstructed voxel in MeV
     truth_index : np.ndarray, default np.array([])
@@ -56,9 +57,10 @@ class TruthParticle(Particle):
                  sed_points: np.ndarray = np.empty((0, 3), dtype=np.float32),
                  sed_depositions_MeV: np.ndarray = np.empty(0, dtype=np.float32),
                  truth_momentum: np.ndarray = np.full(3, -np.inf, dtype=np.float32),
+                 truth_end_momentum: np.ndarray = np.full(3, -np.inf, dtype=np.float32),
                  truth_start_dir: np.ndarray = np.full(3, -np.inf, dtype=np.float32),
-                 particle_asis: object = larcv.Particle(),
                  children_counts: np.ndarray = np.zeros(len(SHAPE_LABELS), dtype=np.int64),
+                 particle_asis: object = None,
                  **kwargs):
 
         # Set the attributes of the parent Particle class
@@ -81,8 +83,9 @@ class TruthParticle(Particle):
         self._sed_depositions_MeV   = np.atleast_1d(sed_depositions_MeV).astype(np.float32)
 
         # Load truth information from the true particle object
-        self.truth_momentum = np.copy(truth_momentum).astype(np.float32)
-        self.truth_start_dir = np.copy(truth_start_dir).astype(np.float32)
+        self.truth_momentum = np.copy(truth_momentum)
+        self.truth_end_momentum = np.copy(truth_end_momentum)
+        self.truth_start_dir = np.copy(truth_start_dir)
         if particle_asis is not None:
             self.register_larcv_particle(particle_asis)
 
@@ -119,8 +122,9 @@ class TruthParticle(Particle):
         if hasattr(particle, 'gen_id'):
             setattr(self, 'gen_id', particle.gen_id())
             
-        # Exception for particle_id
+        # Exception for id and interactio_id
         self.truth_id = particle.id()
+        self.truth_interaction_id = particle.interaction_id()
 
         # Load up the children list
         self.children_id = np.array(particle.children_id())
@@ -135,6 +139,8 @@ class TruthParticle(Particle):
 
         # Load up the 3-momentum (stored in a peculiar way) and the direction
         self.truth_momentum = np.array([getattr(particle, f'p{a}')() for a in ['x', 'y', 'z']])
+        if hasattr(particle, f'end_px'):
+            self.truth_end_momentum = np.array([getattr(particle, f'end_p{a}')() for a in ['x', 'y', 'z']])
         self.truth_start_dir = np.full(3, -np.inf, dtype=np.float32)
         if np.linalg.norm(self.truth_momentum):
             self.truth_start_dir = \
@@ -190,6 +196,8 @@ class TruthParticle(Particle):
         # TODO: Move this to main list once this is in every LArCV file
         if 'gen_id' in particle_dict:
             setattr(self, 'gen_id', particle_dict['gen_id'])
+        if 'truth_interaction_id' in particle_dict:
+            setattr(self, 'truth_interaction_id', particle_dict['truth_interaction_id'])
         if 'ke_init' in particle_dict:
             setattr(self, 'ke_init', particle_dict['ke_init'])
 

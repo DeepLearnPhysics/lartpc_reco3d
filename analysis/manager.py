@@ -1,4 +1,4 @@
-import time, os, yaml
+import time, os, yaml, pathlib
 
 from mlreco.iotools.factories import loader_factory, \
         reader_factory, writer_factory
@@ -93,6 +93,7 @@ class AnaToolsManager:
 
     def initialize_base(self,
                         log_dir = './',
+                        prefix_log = False,
                         parent_path = None,
                         iteration = -1,
                         run_mode = 'all',
@@ -109,6 +110,8 @@ class AnaToolsManager:
         ----------
         log_dir : str, default './'
             Path to the log directory where the logs will be written to
+        prefix_log : bool, default False
+            If True, use the input file name to prefix the log name
         parent_path : str, optional
             Path to the parent directory of the analysis configuration file
         iteration : int, default -1
@@ -141,13 +144,14 @@ class AnaToolsManager:
         self.log_dir = log_dir
         self.logger = CSVWriter(os.path.join(log_dir, 'ana_profile.csv'))
         self.logger_dict = {}
+        self.prefix_log = prefix_log
 
         # Load the full chain configuration, if it is provided
         self.chain_config = chain_config
         if chain_config is not None:
-            cfg = yaml.safe_load(open(chain_config, 'r').read())
-            process_config(cfg, verbose=False)
-            self.chain_config = cfg
+            #cfg = yaml.safe_load(open(chain_config, 'r').read())
+            process_config(chain_config, verbose=False)
+            self.chain_config = chain_config
 
         # Initialize data product builders
         self.builders = {}
@@ -177,10 +181,12 @@ class AnaToolsManager:
         # Initialize the data loading scheme
         if reader is not None:
             # If there is a reader configuration, load reconstructed data
-            reader['to_larcv'] = True # Expected by post-processors
+            if 'to_larcv' not in reader:
+                reader['to_larcv'] = True # Expected by post-processors
             self._data_reader   = reader_factory(reader)
             self.reader_state  = 'file'
             self._set_iteration(self._data_reader)
+            self._file_list = self._data_reader.file_paths
         else:
             # If no reader is provided, run the the ML chain on the fly
             loader = loader_factory(self.chain_config, event_list=self.event_list)
@@ -190,6 +196,12 @@ class AnaToolsManager:
             self._data_reader = Trainer
             self.reader_state = 'trainval'
             self._set_iteration(loader.dataset)
+            self._file_list = loader.dataset._files
+
+        if self.prefix_log and len(self._file_list) == 1:
+            prefix = pathlib.Path(self._file_list[0]).stem
+            self.logger = CSVWriter(os.path.join(
+                self.log_dir, f'{prefix}_ana_profile.csv'))
 
     def run(self):
         '''

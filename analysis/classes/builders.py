@@ -477,7 +477,8 @@ class ParticleBuilder(DataBuilder):
                                                      mask_nonghost,
                                                      id=id)
             semantic_type  = int(truth_labels[0])
-            interaction_id = int(truth_labels[1])
+            #interaction_id = int(truth_labels[1])
+            interaction_id = lpart.interaction_id()
             nu_id          = int(truth_labels[2])
             pid            = int(truth_labels[3])
             primary_id     = int(truth_labels[4])
@@ -770,7 +771,8 @@ def handle_empty_truth_particles(labels_noghost,
                                                  verbose=verbose)
 
         semantic_type  = int(truth_labels[0])
-        interaction_id = int(truth_labels[1])
+        #interaction_id = int(truth_labels[1])
+        interaction_id = p.interaction_id()
         nu_id          = int(truth_labels[2])
         pid            = int(truth_labels[3])
         primary_id     = int(truth_labels[4])

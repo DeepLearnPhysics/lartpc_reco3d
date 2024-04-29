@@ -1,3 +1,4 @@
+from warnings import warn
 import numpy as np
 import scipy
 import torch
@@ -47,7 +48,8 @@ def get_ppn_labels(particle_v, meta, dim=3, min_voxel_count=5,
     part_info = []
     for part_index, particle in enumerate(particle_v):
         # Check that the particle has the expected index
-        assert part_index == particle.id()
+        if part_index != particle.id():
+            warn("Particle index not aligned with its id()!.")
 
         # If the particle does not meet minimum energy/size requirements, skip
         if particle.energy_deposit() < min_energy_deposit or \
@@ -413,7 +415,6 @@ def image_coordinates(meta, point, dim=3):
 
 
 def uresnet_ppn_type_point_selector(*args, **kwargs):
-        from warnings import warn
         warn('uresnet_ppn_type_point_selector is deprecated,'
              'use get_ppn_predictions instead')
         return get_ppn_predictions(*args, **kwargs)

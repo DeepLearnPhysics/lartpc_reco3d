@@ -1,4 +1,4 @@
-import os, time, datetime, glob, sys, yaml
+import os, time, datetime, glob, sys, yaml, pathlib
 import numpy as np
 try:
     if os.environ.get('OMP_NUM_THREADS') is None:
@@ -117,11 +117,16 @@ def make_directories(cfg, loaded_iteration, handlers=None):
 
         # Log save directory
         if cfg['trainval']['log_dir']:
+            prefix = ''
+            if cfg['trainval'].get('prefix_log', False) and not cfg['trainval']['train']:
+                data_keys = cfg['iotool']['dataset']['data_keys']
+                if len(data_keys) == 1 and len(glob.glob(data_keys[0])) == 1:
+                    prefix = pathlib.Path(data_keys[0]).stem + '_'
             if not os.path.exists(cfg['trainval']['log_dir']):
                 os.makedirs(cfg['trainval']['log_dir'])
             logname = '%s/train_log-%07d.csv' % (cfg['trainval']['log_dir'], loaded_iteration)
             if not cfg['trainval']['train']:
-                logname = '%s/inference_log-%07d.csv' % (cfg['trainval']['log_dir'], loaded_iteration)
+                logname = '%s/%sinference_log-%07d.csv' % (cfg['trainval']['log_dir'], prefix, loaded_iteration)
             if handlers is not None:
                 handlers.csv_logger = CSVWriter(logname)
 

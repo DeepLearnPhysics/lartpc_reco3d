@@ -1,6 +1,5 @@
 import numpy as np
 from collections import defaultdict
-from larcv import larcv
 
 # Column which specifies the batch ID in a sparse tensor
 BATCH_COL = 0
@@ -38,13 +37,13 @@ PPN_SHAPE_COL  = 12                          # Predicted shape
 PPN_END_COLS   = np.array([13, 14])          # Softmax end point scores
 
 # Shape ID of each type of voxel category
-SHOWR_SHP = larcv.kShapeShower    # 0
-TRACK_SHP = larcv.kShapeTrack     # 1
-MICHL_SHP = larcv.kShapeMichel    # 2
-DELTA_SHP = larcv.kShapeDelta     # 3
-LOWES_SHP = larcv.kShapeLEScatter # 4
-GHOST_SHP = larcv.kShapeGhost     # 5
-UNKWN_SHP = larcv.kShapeUnknown   # 6
+SHOWR_SHP = 0 # larcv.kShapeShower
+TRACK_SHP = 1 # larcv.kShapeTrack
+MICHL_SHP = 2 # larcv.kShapeMichel
+DELTA_SHP = 3 # larcv.kShapeDelta
+LOWES_SHP = 4 # larcv.kShapeLEScatter
+GHOST_SHP = 5 # larcv.kShapeGhost
+UNKWN_SHP = 6 # larcv.kShapeUnknown
 
 # Shape precedence used in the cluster labeling process
 SHAPE_PREC = [TRACK_SHP, MICHL_SHP, SHOWR_SHP, DELTA_SHP, LOWES_SHP, UNKWN_SHP]
@@ -61,9 +60,9 @@ SHAPE_LABELS = {
 }
 
 # Invalid larcv.Particle labels
-INVAL_ID   = larcv.kINVALID_INSTANCEID # Particle group/parent/interaction ID
-INVAL_TID  = larcv.kINVALID_UINT       # Particle Geant4 track ID
-INVAL_PDG  = 0                         # Particle PDG code
+INVAL_ID   = 9223372036854775807 # larcv.kINVALID_INSTANCEID
+INVAL_TID  = 4294967295          # larcv.kINVALID_UINT
+INVAL_PDG  = 0                   # Invalid particle PDG code
 
 # Particle ID of each recognized particle species
 PHOT_PID = 0

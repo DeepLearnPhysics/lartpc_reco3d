@@ -64,6 +64,8 @@ class HDF5Reader:
                         'File does not contain an event tree'
 
                 split_groups = 'data' in in_file and 'result' in in_file
+                if not split_groups and 'category' in in_file['index'].attrs:
+                    split_groups = True
                 assert self.split_groups is None \
                         or self.split_groups == split_groups, \
                         'Cannot load files with different storing schemes'
@@ -71,7 +73,7 @@ class HDF5Reader:
 
                 # If requested, register the [run, event] information pair
                 if create_run_map:
-                    source = in_file['data'] if split_groups else in_file
+                    source = in_file['data'] if 'data' in in_file else in_file
                     assert 'run_info' in source, \
                             'Must provide run info to create run map'
                     run_info = source['run_info']
@@ -339,9 +341,14 @@ class HDF5Reader:
         group = in_file
         blob  = result_blob
         if self.split_groups:
-            cat   = 'data' if key in in_file['data'] else 'result'
+            if 'data' in in_file:
+                cat   = 'data' if key in in_file['data'] else 'result'
+                blob  = data_blob if cat == 'data' else result_blob
+                group = in_file[cat]
+            else:
+                cat = in_file[key].attrs['category']
             blob  = data_blob if cat == 'data' else result_blob
-            group = in_file[cat]
+
         if isinstance(group[key], h5py.Dataset):
             if not group[key].dtype.names:
                 # If the reference points at a simple dataset, return
@@ -478,14 +485,16 @@ class HDF5Reader:
             # Momentum is particular, deal with it first
             if isinstance(obj, (larcv.Particle, larcv.Neutrino)):
                 obj.momentum(*[obj_dict[f'p{k}'] for k in ['x', 'y', 'z']])
+            if hasattr(obj, 'end_momentum'):
+                obj.end_momentum(*[obj_dict[f'end_p{k}'] for k in ['x', 'y', 'z']])
 
             # Trajectory for neutrino is also particular, deal with it
-            if isinstance(obj, larcv.Neutrino):
+            if isinstance(obj, larcv.Neutrino) and 'traj_x' in obj_dict:
                 obj.add_trajectory_point(*[obj_dict[f'traj_{k}'] for k in ['x', 'y', 'z', 't', 'px', 'py', 'pz', 'e']])
 
             # Now deal with the rest
             for name in names:
-                if name in ['px', 'py', 'pz', 'p', 'TotalPE'] or name[:5] == 'traj_':
+                if name in ['px', 'py', 'pz', 'p', 'end_px', 'end_py', 'end_pz', 'end_p', 'TotalPE'] or name[:5] == 'traj_':
                     continue # Addressed by other setters
                 if 'position' in name or 'step' in name:
                     getattr(obj, name)(*obj_dict[name])

@@ -4,7 +4,6 @@ import torch
 from collections import defaultdict
 
 from .iotools.data_parallel import DataParallel
-from .iotools.parsers.unwrap_rules import input_unwrap_rules
 
 from .models import construct
 from .models.experimental.bayes.calibration import calibrator_construct, calibrator_loss_construct
@@ -12,7 +11,7 @@ from .models.experimental.bayes.calibration import calibrator_construct, calibra
 from .utils import to_numpy
 from .utils.stopwatch import Stopwatch
 from .utils.adabound import AdaBound, AdaBoundW
-from .utils.unwrap import Unwrapper
+from .utils.unwrap import Unwrapper, input_unwrap_rules
 
 import mlreco.utils.lr_warmup as lr_schedulers
 
