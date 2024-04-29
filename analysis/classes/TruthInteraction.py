@@ -107,8 +107,8 @@ class TruthInteraction(Interaction):
 
         if self._particles is None:
             self._depositions_MeV        = depositions_MeV
-            self._truth_depositions      = truth_depositions
-            self._truth_depositions_MeV  = truth_depositions_MeV
+            self._truth_depositions      = truth_depositions.astype(np.float32)
+            self._truth_depositions_MeV  = truth_depositions_MeV.astype(np.float32)
             self.truth_points = truth_points
             self.truth_index = truth_index
 

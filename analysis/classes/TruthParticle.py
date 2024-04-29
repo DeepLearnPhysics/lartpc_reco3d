@@ -69,20 +69,20 @@ class TruthParticle(Particle):
         self._sed_index             = None
 
         # Set attributes
-        self._depositions_MeV       = np.atleast_1d(depositions_MeV)
+        self._depositions_MeV       = np.atleast_1d(depositions_MeV).astype(np.float32)
 
         self.truth_index            = truth_index
-        self._truth_points          = truth_points
-        self._truth_depositions     = np.atleast_1d(truth_depositions)     # Must be ADC
-        self._truth_depositions_MeV = np.atleast_1d(truth_depositions_MeV) # Must be MeV
+        self._truth_points          = truth_points.astype(np.float32)
+        self._truth_depositions     = np.atleast_1d(truth_depositions).astype(np.float32)     # Must be ADC
+        self._truth_depositions_MeV = np.atleast_1d(truth_depositions_MeV).astype(np.float32) # Must be MeV
 
         self.sed_index              = sed_index
         self._sed_points            = sed_points
-        self._sed_depositions_MeV   = np.atleast_1d(sed_depositions_MeV)
+        self._sed_depositions_MeV   = np.atleast_1d(sed_depositions_MeV).astype(np.float32)
 
         # Load truth information from the true particle object
-        self.truth_momentum = np.copy(truth_momentum)
-        self.truth_start_dir = np.copy(truth_start_dir)
+        self.truth_momentum = np.copy(truth_momentum).astype(np.float32)
+        self.truth_start_dir = np.copy(truth_start_dir).astype(np.float32)
         if particle_asis is not None:
             self.register_larcv_particle(particle_asis)
 

@@ -18,6 +18,7 @@ RULES = {
     'parse_particle_graph': ['tensor', None],
     'parse_particle_singlep_pdg': ['tensor', None],
     'parse_particle_singlep_einit': ['tensor', None],
+    'parse_particle_singlep_startpoint': ['tensor', None],
 
     'parse_meta2d': ['list'],
     'parse_meta3d': ['list'],
