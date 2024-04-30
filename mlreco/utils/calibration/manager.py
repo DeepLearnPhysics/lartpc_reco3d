@@ -23,15 +23,13 @@ class CalibrationManager:
         '''
         # Initialize the geometry model shared across all modules
         assert 'geometry' in cfg, \
-                'Must provide a geometry configuration to apply calibrations'
+                'Must provide a geometry configuration to apply calibrations.'
         self.geo = Geometry(**cfg.pop('geometry'))
 
         # Make sure the essential calibration modules are present
-        assert 'gain' in cfg, \
-                'Must provide an ADC to number electrons conversion factor'
-        assert 'recombination' in cfg, \
-                'Must provide a recombination model to convert from number ' \
-                'of electrons to an energy deposition in MeV'
+        assert not 'recombination' in cfg or 'gain' in cfg, \
+                'Must provide an ADC to number electrons conversion factor if '
+                'the recombination algorithm is run.'
 
         # Add the modules to a processor list in decreasing order of priority
         self.modules   = {}
@@ -78,7 +76,7 @@ class CalibrationManager:
         Returns
         -------
         np.ndarray
-            (N) array of calibrated depositions in MeV
+            (N) array of calibrated depositions in ADC, e- or MeV
         '''
         # Reset the profilers
         for key in self.profilers:
@@ -120,11 +118,13 @@ class CalibrationManager:
                         tpc_values, self.geo, t, run_id) # ADC
 
             # Apply the gain correction
-            tpc_values = self.modules['gain'].process(tpc_values, t) # e-
+            if 'gain' in self.modules:
+                tpc_values = self.modules['gain'].process(tpc_values, t) # e-
 
             # Apply the recombination
-            tpc_values = self.modules['recombination'].process(tpc_values,
-                    tpc_points, dedx, track) # MeV
+            if 'recombination' in self.modules:
+                tpc_values = self.modules['recombination'].process(tpc_values,
+                        tpc_points, dedx, track) # MeV
 
             # Append
             new_values[tpc_indexes[t]] = tpc_values
