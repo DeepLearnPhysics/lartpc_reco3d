@@ -6,7 +6,6 @@ from .tracking import CSDAEnergyProcessor
 from .mcs import MCSEnergyProcessor
 from .kinematics import ParticleSemanticsProcessor, \
         ParticlePropertiesProcessor, InteractionTopologyProcessor, RecoVertexShowerProcessor
-from .vertex import VertexProcessor
 from .ppn import PPNProcessor
 from .label import ChildrenProcessor
 # from .neutrino import NeutrinoEnergyProcessor
