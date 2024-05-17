@@ -28,7 +28,7 @@ class CalibrationManager:
 
         # Make sure the essential calibration modules are present
         assert not 'recombination' in cfg or 'gain' in cfg, \
-                'Must provide an ADC to number electrons conversion factor if '
+                'Must provide an ADC to number electrons conversion factor if '\
                 'the recombination algorithm is run.'
 
         # Add the modules to a processor list in decreasing order of priority

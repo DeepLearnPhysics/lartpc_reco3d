@@ -50,7 +50,7 @@ class LifetimeCalibrator:
             self.use_db = False
 
             # Inititalize lifetime
-            if np.issclar(lifetime):
+            if np.isscalar(lifetime):
                 self.lifetime = np.full(num_tpcs, lifetime)
             else:
                 assert len(lifetime) == num_tpcs, \
@@ -63,7 +63,7 @@ class LifetimeCalibrator:
             else:
                 assert len(driftv) == num_tpcs, \
                         '`driftv` list must provide one value per TPC'
-                self.drift = driftv
+                self.driftv = driftv
 
         # If databases are provided, load them in
         if lifetime_db:
