@@ -428,6 +428,7 @@ class ParticleBuilder(DataBuilder):
                 sed_index     = np.where(mask_sed)[0]
             else:
                 mask_sed, sed_index = np.array([]), np.array([])
+            
             if np.count_nonzero(mask_nonghost) <= 0:
                 continue  # Skip larcv particles with no true depositions
             # 1. Check if current pid is one of the existing group ids
@@ -515,6 +516,9 @@ class ParticleBuilder(DataBuilder):
             particle.start_point = particle.first_step
             if particle.semantic_type == TRACK_SHP:
                 particle.end_point = particle.last_step
+                
+            assert particle.points.shape[0] == particle.depositions.shape[0]
+            assert particle.truth_points.shape[0] == particle.truth_depositions.shape[0]
 
             out.append(particle)
 
@@ -729,7 +733,8 @@ def handle_empty_truth_particles(labels_noghost,
                                  entry,
                                  verbose=False,
                                  sed=None,
-                                 mask_sed=None):
+                                 mask_sed=None,
+                                 energy_label=None):
     """
     Function for handling true larcv::Particle instances with valid
     true nonghost voxels but with no predicted nonghost voxels.
@@ -757,30 +762,35 @@ def handle_empty_truth_particles(labels_noghost,
     coords, depositions, voxel_indices = np.empty((0,3)), np.array([]), np.array([])
     coords_noghost, depositions_noghost = np.empty((0,3)), np.array([])
     sed_index, sed_points, sed_depositions_MeV = np.array([]), np.empty((0,3)), np.array([])
-    if np.count_nonzero(mask_noghost) > 0:
-        if sed is not None:
-            sed_points = sed[mask_sed][:, COORD_COLS]
-            sed_index = np.where(mask_sed)[0]
-            sed_depositions_MeV = sed[mask_sed][:, VALUE_COL]
-        coords_noghost = labels_noghost[mask_noghost][:, COORD_COLS]
-        true_voxel_indices = np.where(mask_noghost)[0]
-        depositions_noghost = labels_noghost[mask_noghost][:, VALUE_COL].squeeze()
-        truth_labels = get_truth_particle_labels(labels_noghost,
-                                                 mask_noghost,
-                                                 id=id,
-                                                 verbose=verbose)
 
-        semantic_type  = int(truth_labels[0])
-        #interaction_id = int(truth_labels[1])
-        interaction_id = p.interaction_id()
-        nu_id          = int(truth_labels[2])
-        pid            = int(truth_labels[3])
-        primary_id     = int(truth_labels[4])
-        is_primary     = bool(int(primary_id) == 1)
+    if sed is not None:
+        sed_points = sed[mask_sed][:, COORD_COLS]
+        sed_index = np.where(mask_sed)[0]
+        sed_depositions_MeV = sed[mask_sed][:, VALUE_COL]
+    coords_noghost = labels_noghost[mask_noghost][:, COORD_COLS]
+    true_voxel_indices = np.where(mask_noghost)[0]
+    depositions_noghost = labels_noghost[mask_noghost][:, VALUE_COL].squeeze()
+    truth_labels = get_truth_particle_labels(labels_noghost,
+                                                mask_noghost,
+                                                id=id,
+                                                verbose=verbose)
 
-        volume_id, cts = np.unique(labels_noghost[:, BATCH_COL][mask_noghost].astype(int),
-                                    return_counts=True)
-        volume_id = int(volume_id[cts.argmax()])
+    semantic_type  = int(truth_labels[0])
+    #interaction_id = int(truth_labels[1])
+    interaction_id = p.interaction_id()
+    nu_id          = int(truth_labels[2])
+    pid            = int(truth_labels[3])
+    primary_id     = int(truth_labels[4])
+    is_primary     = bool(int(primary_id) == 1)
+
+    volume_id, cts = np.unique(labels_noghost[:, BATCH_COL][mask_noghost].astype(int),
+                                return_counts=True)
+    volume_id = int(volume_id[cts.argmax()])
+    
+    if energy_label is not None:
+        truth_depositions_MeV = energy_label[mask_noghost][:, VALUE_COL]
+    else:
+        truth_depositions_MeV = np.empty(0, dtype=np.float32)
 
     particle = TruthParticle(group_id=id,
                              interaction_id=interaction_id,
@@ -795,8 +805,8 @@ def handle_empty_truth_particles(labels_noghost,
                              depositions_MeV=np.empty(0, dtype=np.float32),
                              truth_index=true_voxel_indices,
                              truth_points=coords_noghost,
-                             truth_depositions=np.empty(0, dtype=np.float32), #TODO
-                             truth_depositions_MeV=depositions_noghost,
+                             truth_depositions=depositions_noghost,
+                             truth_depositions_MeV=truth_depositions_MeV,
                              is_primary=is_primary,
                              sed_index=sed_index.astype(np.int64),
                              sed_points=sed_points.astype(np.float32),
@@ -804,6 +814,10 @@ def handle_empty_truth_particles(labels_noghost,
                              particle_asis=p,
                              start_point=-np.ones(3, dtype=np.float32),
                              end_point=-np.ones(3, dtype=np.float32))
+    
+    assert particle.truth_points.shape[0] == particle.truth_depositions.shape[0]
+    assert particle.truth_points.shape[0] > 0
+    
     return particle
 
 
