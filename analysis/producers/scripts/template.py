@@ -260,6 +260,101 @@ def run_bidirectional_inference(data_blob, res, **kwargs):
     return [interactions_t2r, particles_t2r, interactions_r2t, particles_r2t]
 
 
+@write_to(['interactions_t2r', 'interactions_r2t'])
+def run_bidirectional_inference_interactions_only(data_blob, res, **kwargs):
+    """
+    Template for a logging script for particle and interaction objects.
+
+    Parameters
+    ----------
+    data_blob: dict
+        Data dictionary after both model forwarding post-processing
+    res: dict
+        Result dictionary after both model forwarding and post-processing
+
+    Returns
+    -------
+    interactions: List[List[dict]]
+        List of list of dicts, with length batch_size in the top level
+        and length num_interactions (max between true and reco) in the second
+
+    particles: List[List[dict]]
+        List of list of dicts, with same structure as <interactions> but with
+        per-particle information.
+
+    Information in <interactions> will be saved to $log_dir/interactions.csv
+    and <particles> to $log_dir/particles.csv.
+    """
+
+    interactions_t2r, interactions_r2t = [], []
+
+    int_fieldnames        = kwargs['logger'].get('interactions', {})
+
+    image_idxs = data_blob['index']
+    meta       = data_blob['meta'][0]
+
+    for idx, index in enumerate(image_idxs):
+
+        index_dict = {
+            'Iteration': kwargs['iteration'],
+            'Index': index,
+            'file_index': data_blob['file_index'][idx]
+        }
+
+        # 1. Match Interactions and log interaction-level information
+        imatches, icounts = res['matched_interactions_t2r'][idx], res['interaction_match_overlap_t2r'][idx]
+        # 1 a) Check outputs from interaction matching 
+        if len(imatches) > 0:
+            # 2. Process interaction level information
+            interaction_logger = InteractionLogger(int_fieldnames, meta=meta)
+            interaction_logger.prepare()
+
+            for i, interaction_pair in enumerate(imatches):
+
+                int_dict = OrderedDict()
+                int_dict.update(index_dict)
+                int_dict['interaction_match_overlap'] = icounts[i]
+                
+                true_int, pred_int = interaction_pair[0], interaction_pair[1]
+
+                assert (type(true_int) is TruthInteraction) or (true_int is None)
+                assert (type(pred_int) is Interaction) or (pred_int is None)
+
+                true_int_dict = interaction_logger.produce(true_int, mode='true')
+                pred_int_dict = interaction_logger.produce(pred_int, mode='reco')
+                int_dict.update(true_int_dict)
+                int_dict.update(pred_int_dict)
+                interactions_t2r.append(int_dict)
+                
+        # 1. Match Interactions and log interaction-level information
+        imatches, icounts = res['matched_interactions_r2t'][idx], res['interaction_match_overlap_r2t'][idx]
+        pmatches, pcounts = res['matched_particles_r2t'][idx], res['particle_match_overlap_r2t'][idx]
+        # 1 a) Check outputs from interaction matching 
+        if len(imatches) > 0:
+            # 2. Process interaction level information
+            interaction_logger = InteractionLogger(int_fieldnames, meta=meta)
+            interaction_logger.prepare()
+
+            for i, interaction_pair in enumerate(imatches):
+
+                int_dict = OrderedDict()
+                int_dict.update(index_dict)
+                int_dict['interaction_match_overlap'] = icounts[i]
+                
+                pred_int, true_int = interaction_pair[0], interaction_pair[1]
+
+                assert (type(true_int) is TruthInteraction) or (true_int is None)
+                assert (type(pred_int) is Interaction) or (pred_int is None)
+
+                true_int_dict = interaction_logger.produce(true_int, mode='true')
+                pred_int_dict = interaction_logger.produce(pred_int, mode='reco')
+                int_dict.update(true_int_dict)
+                int_dict.update(pred_int_dict)
+                interactions_r2t.append(int_dict)
+
+    return [interactions_t2r, interactions_r2t]
+
+
 def _run_inference_data(data_blob, res, **kwargs):
     """
     Template for a logging script for particle and interaction objects.
