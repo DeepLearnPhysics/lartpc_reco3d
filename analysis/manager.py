@@ -149,9 +149,9 @@ class AnaToolsManager:
         # Load the full chain configuration, if it is provided
         self.chain_config = chain_config
         if chain_config is not None:
-            #cfg = yaml.safe_load(open(chain_config, 'r').read())
-            process_config(chain_config, verbose=False)
-            self.chain_config = chain_config
+            cfg = yaml.safe_load(open(chain_config, 'r').read())
+            process_config(cfg, verbose=False)
+            self.chain_config = cfg
 
         # Initialize data product builders
         self.builders = {}
