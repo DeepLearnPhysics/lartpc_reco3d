@@ -141,7 +141,7 @@ class Particle:
         self.index          = index
         self.points         = points
         self.sources        = sources
-        self.depositions    = depositions
+        self.depositions    = np.ascontiguousarray(depositions).astype(np.float32)
 
         self.pdg_code       = -1
 
