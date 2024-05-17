@@ -4,7 +4,7 @@ from mlreco.utils.globals import *
 
 from mlreco.utils.gnn.cluster import get_cluster_label
 from mlreco.utils.tracking import get_track_segment_dedxs, get_track_deposition_gradient
-from mlreco.utils.gnn.cluster import get_cluster_dedxs
+from mlreco.utils.gnn.cluster import get_cluster_dedxs, get_cluster_points_label
 
 @write_to(['pid_metrics'])
 def pid_metrics(data_blob, res, **kwargs):
@@ -37,9 +37,20 @@ def pid_metrics(data_blob, res, **kwargs):
         group_labels = get_cluster_label(data, clusts, column=GROUP_COL)
         shape_labels = get_cluster_label(data, clusts, column=SHAPE_COL)
         
-        startpoints = data_blob['particles_label'][idx][:, COORD_COLS]
+        partice_points = data_blob['particles_label'][idx]
         
-        shower_dedx = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], startpoints, clusts, max_dist=10)
+        points = get_cluster_points_label(data, partice_points, clusts, random_order=False)
+        
+        shower_dedx = {}
+        
+        shower_dedx[0] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=3)
+        shower_dedx[1] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=5)
+        shower_dedx[2] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=7.5)
+        shower_dedx[3] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=10)
+        shower_dedx[4] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=15)
+        shower_dedx[5] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=20)
+        shower_dedx[6] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=30)
+        shower_dedx[7] = get_cluster_dedxs(data[:, COORD_COLS], data[:, VALUE_COL], points[:, :3], clusts, max_dist=40)
 
         index_dict = {
             'Iteration': kwargs['iteration'],
@@ -64,7 +75,8 @@ def pid_metrics(data_blob, res, **kwargs):
             out_dict['energy_init'] = p.energy_init()
             out_dict['energy_deposit'] = p.energy_deposit()
             out_dict['creation_process'] = p.creation_process()
-            out_dict['shower_dedx'] = shower_dedx[j]
+            for dedx_length in shower_dedx:
+                out_dict[f'shower_dedx_{dedx_length}'] = shower_dedx[dedx_length][j]
             out_dict['semantic_type'] = int(shape_labels[j])
             for k, s in enumerate(score):
                 out_dict['Score_{}'.format(k)] = s
