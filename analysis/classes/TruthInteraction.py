@@ -9,7 +9,7 @@ from . import Interaction, TruthParticle
 from .Interaction import _process_interaction_attributes
 
 from mlreco.utils import pixel_to_cm
-from mlreco.utils.globals import PID_LABELS
+from mlreco.utils.globals import PID_LABELS, NU_CURR_TYPE, NU_INT_TYPE
 from mlreco.utils.decorators import inherit_docstring
 
 @inherit_docstring(Interaction)
@@ -345,6 +345,23 @@ class TruthInteraction(Interaction):
     @property
     def satisfiability(self):
         raise ValueError("Satisfiability is a reco quantity and is not defined for TruthInteractions")
+    
+    def nu_info(self):
+        '''
+        Simple printout of the neutrino information (if it exists)
+        '''
+        
+        msg = f'''
+        Neutrino Interaction: {self.nu_pdg_code}
+        ------------------------
+        Interaction Type : {NU_INT_TYPE[self.nu_interaction_type]}
+        Interaction Mode : {self.nu_interaction_mode}
+        Current Type     : {NU_CURR_TYPE[self.nu_current_type]}
+        Nu Initial Energy: {self.nu_energy_init * 1000:.2f} MeV
+        True Topology    : {self.truth_topology}
+        Visible Topology : {self.topology}
+        '''
+        return msg
 
 
 # ------------------------------Helper Functions---------------------------
