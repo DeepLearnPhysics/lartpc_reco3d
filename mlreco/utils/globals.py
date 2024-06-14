@@ -156,7 +156,7 @@ NU_INT_TYPE = {
     11:   'Diffractive',
     12:   'EM',
     13:   'WeakMix',
-    1000: 'NuanceOffset',
+    1000: 'MesonExchange',
     1001: 'CCQE',
     1002: 'NCQE',
     1003: 'ResCCNuProtonPiPlus',
