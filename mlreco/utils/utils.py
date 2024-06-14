@@ -60,7 +60,7 @@ def local_cdist(v1, v2):
     return torch.sqrt(torch.pow(v2_2 - v1_2, 2).sum(2))
 
 
-def pixel_to_cm(coords, meta, translate=True):
+def pixel_to_cm(coords, meta, translate=True, center=False):
     '''
     Converts the pixel indices in a tensor to detector coordinates
     using the metadata information.
@@ -77,16 +77,19 @@ def pixel_to_cm(coords, meta, translate=True):
         (6/9) Array of metadata information
     translate : bool, default True
         If set to `False`, this function returns the input unchanged
+    center : bool, default False
+        Whether to place the coordinates at the center of the pixel or not.
+        Provides a unbiased estimate for true pixel coordinates
     '''
     if not translate or not len(coords):
         return coords
 
     lower, upper, size = np.split(np.asarray(meta).reshape(-1), 3)
-    out = lower + (coords + .5) * size
+    out = lower + (coords + .5*center) * size
     return out.astype(np.float32)
 
 
-def cm_to_pixel(coords, meta, translate=True):
+def cm_to_pixel(coords, meta, translate=True, floor=False):
     '''
     Converts the detector coordinates in a tensor to pixel indices
     using the metadata information.
@@ -103,9 +106,14 @@ def cm_to_pixel(coords, meta, translate=True):
         (6/9) Array of metadata information
     translate : bool, default True
         If set to `False`, this function returns the input unchanged
+    floor : bool, default False
+        Floors the pixel coordinates to produce to indexes
     '''
     if not translate or not len(coords):
         return coords
 
     lower, upper, size = np.split(np.asarray(meta).reshape(-1), 3)
-    return (coords - lower) / size - .5
+    if not floor :
+        return (coords - lower) / size
+    else:
+        return np.floor((coords - lower) / size)

@@ -3,7 +3,6 @@ from typing import Counter, List, Union
 
 from . import Particle
 
-from mlreco.utils import pixel_to_cm
 from mlreco.utils.globals import PDG_TO_PID, TRACK_SHP, SHAPE_LABELS, \
         PID_LABELS, PID_MASSES
 from mlreco.utils.decorators import inherit_docstring
@@ -45,6 +44,8 @@ class TruthParticle(Particle):
     _COORD_ATTRS = Particle._COORD_ATTRS +\
 	['truth_points', 'sed_points', 'position', 'end_position',\
 	'parent_position', 'ancestor_position', 'first_step', 'last_step']
+    _TRUTH_COORD_ATTRS = ['position', 'end_position', 'parent_position',
+                          'ancestor_position', 'first_step', 'last_step']
 
     def __init__(self,
                  *args,

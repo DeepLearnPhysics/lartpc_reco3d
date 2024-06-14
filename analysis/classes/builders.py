@@ -411,7 +411,6 @@ class ParticleBuilder(DataBuilder):
             simE_deposits   = None
 
         # point_labels   = data['point_labels'][entry]
-        # unit_convert = lambda x: pixel_to_cm_1d(x, meta) if self.convert_to_cm == True else x
 
         # For debugging
         voxel_counts = 0
@@ -940,10 +939,3 @@ def match_points_to_particles(ppn_points : np.ndarray,
         dist = cdist(ppn_coords, particle.points)
         matches = ppn_points_type[dist.min(axis=1) < ppn_distance_threshold]
         particle.ppn_candidates = matches.reshape(-1, 7)
-
-def pixel_to_cm_1d(vec, meta):
-    out = np.zeros_like(vec)
-    out[0] = meta[0] + meta[6] * vec[0]
-    out[1] = meta[1] + meta[7] * vec[1]
-    out[2] = meta[2] + meta[8] * vec[2]
-    return out

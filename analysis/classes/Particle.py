@@ -85,6 +85,7 @@ class Particle:
 
     # Attributes that specify coordinates
     _COORD_ATTRS = ['points', 'start_point', 'end_point']
+    _TRUTH_COORD_ATTRS = []
 
     def __init__(self,
                  group_id: int = -1,
@@ -465,7 +466,8 @@ class Particle:
         '''
         assert self._units == 'px'
         for attr in self._COORD_ATTRS:
-            setattr(self, attr, pixel_to_cm(getattr(self, attr), meta))
+            center = not attr in self._TRUTH_COORD_ATTRS
+            setattr(self, attr, pixel_to_cm(getattr(self, attr), meta, center=center))
         self._units = 'cm'
 
     @property

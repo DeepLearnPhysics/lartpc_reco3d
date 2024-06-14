@@ -291,6 +291,14 @@ class LikelihoodFlashMatcher:
         # Run the matching
         all_matches = self.mgr.Match()
 
+        # Adjust the output position to account for the module shift
+        for m in all_matches:
+            pos = np.array([m.tpc_point.x, m.tpc_point.y, m.tpc_point.z])
+            pos = self.geo.translate(pos, 0, self.volume_id)
+            m.tpc_point.x = pos[0]
+            m.tpc_point.y = pos[1]
+            m.tpc_point.z = pos[2]
+
         return all_matches
 
     def get_qcluster(self, idx, array=False):

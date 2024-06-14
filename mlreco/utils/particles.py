@@ -1,6 +1,6 @@
 import numpy as np
 
-from .globals import (TRACK_SHP, MICHL_SHP, DELTA_SHP, INVAL_ID,
+from .globals import (TRACK_SHP, MICHL_SHP, DELTA_SHP, INVAL_ID, OLD_INVAL_ID,
                       INVAL_TID, PDG_TO_PID)
 
 
@@ -27,9 +27,10 @@ def get_valid_mask(particles):
         return np.empty(0, dtype=bool)
 
     # If the interaction IDs are set in the particle tree, simply use that
-    inter_ids = np.array([p.interaction_id() for p in particles], dtype=np.int32)
-    if np.any(inter_ids != INVAL_ID):
-        return inter_ids != INVAL_ID
+    inter_ids = np.array([p.interaction_id() for p in particles], dtype=np.int64)
+    valid_mask = (inter_ids != INVAL_ID) & (inter_ids != OLD_INVAL_ID)
+    if np.any(valid_mask):
+        return valid_mask
 
     # Otherwise, check that the ancestor track ID and creation process are valid
     mask  = np.array([p.ancestor_track_id() != INVAL_TID for p in particles])
@@ -60,14 +61,14 @@ def get_interaction_ids(particles):
     '''
     # If there are no particles, nothing to do here
     if not len(particles):
-        return np.empty(0, dtype=np.int32)
+        return np.empty(0, dtype=np.int64)
 
     # Get the mask of valid particle labels
     valid_mask = get_valid_mask(particles)
 
     # If the interaction IDs are set in the particle tree, simply use that
-    inter_ids = np.array([p.interaction_id() for p in particles], dtype=np.int32)
-    if np.any(inter_ids != INVAL_ID):
+    inter_ids = np.array([p.interaction_id() for p in particles], dtype=np.int64)
+    if np.any((inter_ids != INVAL_ID) & (inter_ids != OLD_INVAL_ID)):
         inter_ids[~valid_mask] = -1
         return inter_ids
 
@@ -112,7 +113,7 @@ def get_nu_ids(particles, inter_ids, particles_mpv=None, neutrinos=None):
     '''
     # If there are no particles, nothing to do here
     if not len(particles):
-        return np.empty(0, dtype=np.int32)
+        return np.empty(0, dtype=np.int64)
 
     # Make sure there is only either MPV particles or neutrinos specified, not both
     assert particles_mpv is None or neutrinos is None, \
@@ -134,6 +135,18 @@ def get_nu_ids(particles, inter_ids, particles_mpv=None, neutrinos=None):
             if np.sum(primary_ids[inter_index] == 1) > 1:
                 nu_ids[inter_index] = nu_id
                 nu_id += 1
+
+    elif neutrinos is not None and len(neutrinos) and hasattr(neutrinos[0], 'interaction_id'):
+        # Fetch the neutrino interaction IDs, match them using particle interaction IDs
+        ref_ids = np.array([n.interaction_id() for n in neutrinos])
+        for i in np.unique(inter_ids):
+            if i < 0: continue
+            inter_index = np.where(inter_ids == i)[0]
+            for nu_id, ref_id in enumerate(ref_ids):
+                if i == ref_id:
+                    nu_ids[inter_index] = nu_id
+                    break
+
     else:
         # Find the reference positions to gauge if a particle comes from a neutrino-like interaction
         ref_pos = None
@@ -190,7 +203,7 @@ def get_particle_ids(particles, nu_ids, include_mpr=False, include_secondary=Fal
     np.ndarray
         (P) List of particle IDs, one per true particle instance
     '''
-    particle_ids = -np.ones(len(nu_ids), dtype=np.int32)
+    particle_ids = -np.ones(len(nu_ids), dtype=np.int64)
     primary_ids  = get_group_primary_ids(particles, nu_ids, include_mpr)
     for i in range(len(particle_ids)):
         # If the primary ID is invalid, skip
@@ -224,13 +237,13 @@ def get_shower_primary_ids(particles):
         (P) List of particle shower primary IDs, one per true particle instance
     '''
     # Loop over the list of particle groups
-    primary_ids = np.zeros(len(particles), dtype=np.int32)
-    group_ids   = np.array([p.group_id() for p in particles], dtype=np.int32)
+    primary_ids = np.zeros(len(particles), dtype=np.int64)
+    group_ids   = np.array([p.group_id() for p in particles], dtype=np.int64)
     valid_mask  = get_valid_mask(particles)
     for g in np.unique(group_ids):
         # If the particle group has invalid labeling or if it is a track
         # group, the concept of shower primary is ill-defined
-        if (g == INVAL_ID or
+        if (g == INVAL_ID or g == OLD_INVAL_ID or
             not valid_mask[g] or
             particles[g].shape() == TRACK_SHP):
             group_index = np.where(group_ids == g)[0]
@@ -271,11 +284,11 @@ def get_group_primary_ids(particles, nu_ids=None, include_mpr=True):
         (P) List of particle primary IDs, one per true particle instance
     '''
     # Loop over the list of particles
-    primary_ids = -np.ones(len(particles), dtype=np.int32)
+    primary_ids = -np.ones(len(particles), dtype=np.int64)
     valid_mask  = get_valid_mask(particles)
     for i, p in enumerate(particles):
         # If the particle has invalid labeling, it has invalid primary status
-        if p.group_id() == INVAL_ID or not valid_mask[i]:
+        if p.group_id() == INVAL_ID or p.group_id() == OLD_INVAL_ID or not valid_mask[i]:
             continue
 
         # If MPR particles are not included and the nu_id < 0, assign invalid

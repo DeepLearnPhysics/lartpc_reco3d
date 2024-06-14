@@ -74,7 +74,7 @@ def compute_rescaled_charge(input_data, deghost_mask, last_index,
 
 
 def adapt_labels(cluster_label, segment_label, segmentation, deghost_mask=None,
-        break_classes=[SHOWR_SHP,TRACK_SHP,MICHL_SHP,DELTA_SHP]):
+        break_classes=[SHOWR_SHP,TRACK_SHP,MICHL_SHP,DELTA_SHP], break_eps=1.1):
     """
     Adapts the cluster labels to account for the predicted semantics.
 
@@ -104,6 +104,8 @@ def adapt_labels(cluster_label, segment_label, segmentation, deghost_mask=None,
         (M) Predicted deghost mask
     break_classes : List[int], default [SHOWR_SHP, TRACK_SHP, MICHL_SHP, DELTA_SHP]
         Classes to run DBSCAN on to break up
+    break_eps : int, default 1.1
+        Distance constant for the DBSCAN clustering
 
     Returns
     -------
@@ -141,7 +143,7 @@ def adapt_labels(cluster_label, segment_label, segmentation, deghost_mask=None,
         segment_pred = argmax(segmentation, 1)
 
     # Initialize the DBSCAN algorithm (finds connected groups)
-    dbscan = DBSCAN(eps=1.1, min_samples=1, metric='chebyshev')
+    dbscan = DBSCAN(eps=break_eps, min_samples=1, metric='chebyshev')
 
     # Loop over individual images in the batch
     num_cols = cluster_label.shape[1]

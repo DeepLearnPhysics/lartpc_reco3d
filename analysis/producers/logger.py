@@ -620,7 +620,8 @@ class InteractionLogger(AnalysisLogger):
             'flash_time': -sys.maxsize,
             'flash_total_pE': -sys.maxsize,
             'flash_id': -sys.maxsize,
-            'flash_hypothesis': -sys.maxsize
+            'flash_hypothesis': -sys.maxsize,
+            'flash_xoffset': -sys.maxsize
         }
         if ia is not None:
             if hasattr(ia, 'fmatched'):
@@ -629,6 +630,7 @@ class InteractionLogger(AnalysisLogger):
                 out['flash_total_pE'] = ia.flash_total_pE
                 out['flash_id'] = ia.flash_id
                 out['flash_hypothesis'] = ia.flash_hypothesis
+                out['flash_xoffset'] = ia.flash_xoffset
         return out
     
     @staticmethod

@@ -70,6 +70,7 @@ def parse_cluster3d(cluster_event,
                     type_include_secondary = False,
                     primary_include_mpr = True,
                     break_clusters = False,
+                    break_clusters_eps = 1.1,
                     min_size = -1):
     """
     a function to retrieve a 3D clusters tensor
@@ -92,6 +93,7 @@ def parse_cluster3d(cluster_event,
               type_include_secondary: false
               primary_include_mpr: true
               break_clusters: false
+              break_clusters_eps: 1.1
 
     Configuration
     -------------
@@ -107,6 +109,7 @@ def parse_cluster3d(cluster_event,
     type_include_secondary: bool
     primary_include_mpr: bool
     break_clusters: bool
+    break_clusters_eps: float
 
     Returns
     -------
@@ -142,7 +145,7 @@ def parse_cluster3d(cluster_event,
     if add_particle_info:
         assert particle_event is not None,\
                 'Must provide particle tree if particle information is included'
-        num_particles = particle_event.size()
+        num_particles = particle_event.as_vector().size()
         assert num_particles == num_clusters or num_particles == num_clusters-1,\
                 'The number of particles must be aligned with the number of clusters'
 
@@ -191,7 +194,7 @@ def parse_cluster3d(cluster_event,
 
             # If requested, break cluster into pieces that do not touch each other
             if break_clusters:
-                dbscan = DBSCAN(eps=1.1, min_samples=1, metric='chebyshev')
+                dbscan = DBSCAN(eps=break_clusters_eps, min_samples=1, metric='chebyshev')
                 frag_labels = np.unique(dbscan.fit(voxels).labels_, return_inverse=True)[-1]
                 features[1] = id_offset + frag_labels
                 id_offset += max(frag_labels) + 1
@@ -239,6 +242,7 @@ def parse_cluster3d_charge_rescaled(cluster_event,
                                     type_include_secondary = False,
                                     primary_include_mpr = True,
                                     break_clusters = False,
+                                    break_clusters_eps = 1.1,
                                     min_size = -1,
                                     collection_only=False):
 
@@ -256,6 +260,7 @@ def parse_cluster3d_charge_rescaled(cluster_event,
                                              type_include_secondary,
                                              primary_include_mpr,
                                              break_clusters,
+                                             break_clusters_eps,
                                              min_size)
 
     from .sparse import parse_sparse3d_charge_rescaled
@@ -277,6 +282,7 @@ def parse_cluster3d_2cryos(cluster_event,
                                     type_include_secondary = False,
                                     primary_include_mpr = True,
                                     break_clusters = False,
+                                    break_clusters_eps = 1.1,
                                     min_size = -1):
 
     # Produces cluster3d labels with sparse3d_reco_rescaled on the fly on datasets that do not have it
@@ -293,9 +299,10 @@ def parse_cluster3d_2cryos(cluster_event,
                                              type_include_secondary,
                                              primary_include_mpr,
                                              break_clusters,
+                                             break_clusters_eps,
                                              min_size)
 
-    from .sparse import parse_sparse3d_charge_rescaled
+    from .sparse import parse_sparse3d
     _, charge0 = parse_sparse3d([sparse_value_event_list[0]])
     _, charge1 = parse_sparse3d([sparse_value_event_list[1]])
     charge0[charge0 == 0.] = charge1[charge0 == 0.]

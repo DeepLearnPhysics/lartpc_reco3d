@@ -83,6 +83,7 @@ class FlashMatchingProcessor(PostProcessor):
                 ii.flash_time = -np.inf
                 ii.flash_total_pE = -1.0
                 ii.flash_hypothesis = -1.0
+                ii.flash_xoffset = -np.inf
 
         # Loop over flash keys
         for key, volume_id in self.opflash_map.items():
@@ -104,5 +105,6 @@ class FlashMatchingProcessor(PostProcessor):
                 if hasattr(match, 'hypothesis'):
                     ii.flash_hypothesis = float(np.array(match.hypothesis,
                         dtype=np.float32).sum())
+                    ii.flash_xoffset = match.tpc_point.x - np.mean(ii.points[:, 0])
 
         return {}, {}

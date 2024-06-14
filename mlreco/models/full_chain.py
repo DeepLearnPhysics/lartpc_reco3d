@@ -311,7 +311,8 @@ class FullChain(FullChainGNN):
             label_clustering = [adapt_labels(label_clustering[0],
                                              label_seg[0],
                                              result['segmentation'][0],
-                                             deghost)]
+                                             deghost,
+                                             break_eps=self.adapt_label_break_eps)]
 
         if self.enable_ghost:
             # Update input based on deghosting results

@@ -101,6 +101,7 @@ class HDF5Writer:
                  skip_input_keys: list = [],
                  result_keys: list = None,
                  skip_result_keys: list = [],
+                 dummy_keys: list = [],
                  append_file: bool = False,
                  merge_groups: bool = False):
         '''
@@ -129,6 +130,7 @@ class HDF5Writer:
         self.skip_input_keys  = skip_input_keys
         self.result_keys      = result_keys
         self.skip_result_keys = skip_result_keys
+        self.dummy_keys       = dummy_keys
         self.append_file      = append_file
         self.merge_groups     = merge_groups
         self.ready            = False
@@ -173,6 +175,13 @@ class HDF5Writer:
                 self.result_keys.remove(key)
         for key in self.result_keys:
             self.register_key(result_blob, key, 'result')
+
+        # If requested, add dummy datasets for some requested keys
+        for key in self.dummy_keys:
+            assert key not in self.key_dict, (
+                    "Dummy key exists in the requested keys already, abort.")
+            dummy_blob = {key: [np.empty(0, dtype=np.float32)]}
+            self.register_key(dummy_blob, key, 'result')
 
         # Initialize the output HDF5 file
         with h5py.File(self.file_name, 'w') as out_file:
@@ -250,7 +259,7 @@ class HDF5Writer:
                     # List containing a single list of scalars per batch ID
                     self.key_dict[key]['dtype'] = type(ref_obj)
 
-                elif not isinstance(blob[key][ref_id], list) and not blob[key][ref_id].dtype == np.object:
+                elif not isinstance(blob[key][ref_id], list) and not blob[key][ref_id].dtype == object:
                     # List containing a single ndarray of scalars per batch ID
                     self.key_dict[key]['dtype'] = blob[key][ref_id].dtype
                     self.key_dict[key]['width'] = blob[key][ref_id].shape[1] if len(blob[key][ref_id].shape) == 2 else 0
@@ -433,8 +442,14 @@ class HDF5Writer:
             self.create(data_blob, result_blob, cfg)
             self.ready = True
 
-        # Append file
+        # Create a dummy blob to fill dummy keys with
         self.batch_size = len(data_blob['index'])
+        if self.dummy_keys:
+            dummy_blob = {}
+            for key in self.dummy_keys:
+                dummy_blob[key] = [np.empty(0, dtype=np.float32) for b in range(self.batch_size)]
+
+        # Append file
         with h5py.File(self.file_name, 'a') as out_file:
             # Loop over batch IDs
             for batch_id in range(self.batch_size):
@@ -448,6 +463,8 @@ class HDF5Writer:
                     self.append_key(out_file, event, data_blob, key, batch_id)
                 for key in self.result_keys:
                     self.append_key(out_file, event, result_blob, key, batch_id)
+                for key in self.dummy_keys:
+                    self.append_key(out_file, event, dummy_blob, key, batch_id)
 
                 # Append event
                 event_id  = len(out_file['events'])

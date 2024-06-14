@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Counter, List, Union
 
-from mlreco.utils import pixel_to_cm
 from mlreco.utils.globals import PDG_TO_PID, TRACK_SHP, SHAPE_LABELS, PID_LABELS
 from mlreco.utils.decorators import inherit_docstring
 
@@ -27,6 +26,8 @@ class TruthParticleFragment(ParticleFragment):
     _COORD_ATTRS = ParticleFragment._COORD_ATTRS + \
 	['truth_points', 'sed_points', 'position', 'end_position', \
 	'parent_position', 'ancestor_position', 'first_step', 'last_step']
+    _TRUTH_COORD_ATTRS = ['position', 'end_position', 'parent_position',
+                          'ancestor_position', 'first_step', 'last_step']
 
     def __init__(self, 
                  *args,

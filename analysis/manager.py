@@ -366,6 +366,7 @@ class AnaToolsManager:
             'input_data', 'segment_label',
             'particles_label', 'cluster_label', 'kinematics_label', 'sed'
         ])
+
         result_has_voxels = set([
             'input_rescaled',
             'cluster_label_adapted',
@@ -389,10 +390,10 @@ class AnaToolsManager:
 
         for key, val in data.items():
             if key in data_has_voxels:
-                data[key] = [self._pixel_to_cm(arr, meta) for arr in val]
+                data[key] = [self._pixel_to_cm(arr, meta, center=True) for arr in val]
         for key, val in result.items():
             if key in result_has_voxels:
-                result[key] = [self._pixel_to_cm(arr, meta) for arr in val]
+                result[key] = [self._pixel_to_cm(arr, meta, center=True) for arr in val]
             if key in data_products:
                 for plist in val:
                     for p in plist:
@@ -673,7 +674,7 @@ class AnaToolsManager:
         assert self.max_iteration <= len(dataset)
 
     @staticmethod
-    def _pixel_to_cm(arr, meta):
+    def _pixel_to_cm(arr, meta, center=False):
         '''
         Converts tensor pixel coordinates to detector coordinates
 
@@ -683,6 +684,9 @@ class AnaToolsManager:
             Tensor of which to convert the coordinate columns
         meta : np.ndarray
             Metadata information to operate the translation
+        center : bool, default False
+            Whether to place the coordinates at the center of the pixel or not.
+            Provides a unbiased estimate for true pixel coordinates
         '''
-        arr[:, COORD_COLS] = pixel_to_cm(arr[:, COORD_COLS], meta)
+        arr[:, COORD_COLS] = pixel_to_cm(arr[:, COORD_COLS], meta, center=center)
         return arr

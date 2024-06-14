@@ -931,6 +931,9 @@ def setup_chain_cfg(self, cfg, print_info=True):
     self.use_ppn_in_gnn  = chain_cfg.get('use_ppn_in_gnn', False)
     self.use_supp_in_gnn = chain_cfg.get('use_supp_in_gnn', False)
 
+    # Distance scale to use for the fragmentation in the label adaptation
+    self.adapt_label_break_eps = chain_cfg.get('adapt_label_break_eps', 1.1)
+
     # Make sure the deghosting config is consistent
     if self.enable_ghost and not self.enable_charge_rescaling:
         assert cfg['uresnet_ppn']['uresnet_lonely']['ghost']
