@@ -113,8 +113,6 @@ def gnn_model_dict():
     """
 
     from .message_passing import agnnconv, econv, gatconv, meta, nnconv, nnconv_elu, nnconv_old
-    
-    from mlreco.models.experimental.transformers.models import VanillaTransformer, SPTransformer, EdgeTransformer
 
     models = {
         "agnnconv"      : agnnconv.AGNNConvModel,
@@ -123,10 +121,7 @@ def gnn_model_dict():
         "nnconv"        : nnconv.NNConvModel,
         "meta"          : meta.MetaLayerModel,
         "nnconv_elu"    : nnconv_elu.NNConvModel,
-        "nnconv_old"    : nnconv_old.NNConvModel,
-        'transformer'   : VanillaTransformer,
-        'sp_tformer'    : SPTransformer,
-        'edge_tformer'  : EdgeTransformer
+        "nnconv_old"    : nnconv_old.NNConvModel
     }
 
     return models
@@ -142,12 +137,13 @@ def node_encoder_dict():
     """
 
     from .encoders import geometric, mixed
-    from mlreco.models.layers.gnn.encoders.cnn import ParametricEncoder
-    
+    from mlreco.models.layers.gnn.encoders.cnn import ClustCNNMinkNodeEncoder
+    # from mlreco.models.scn.gnn.encoders.cnn import ClustCNNNodeEncoder
+
     encoders = {
         "geo"       : geometric.ClustGeoNodeEncoder,
-        "mix" : mixed.MixedEncoder,
-        "cnn": ParametricEncoder
+        "mix_debug" : mixed.ClustMixNodeEncoder,
+        "cnn": ClustCNNMinkNodeEncoder
     }
 
     return encoders
@@ -163,12 +159,13 @@ def edge_encoder_dict():
     """
 
     from .encoders import geometric, mixed
-    # from mlreco.models.layers.gnn.encoders.cnn import ClustCNNMinkEdgeEncoder
+    from mlreco.models.layers.gnn.encoders.cnn import ClustCNNMinkEdgeEncoder
+    # from mlreco.models.scn.gnn.encoders.cnn import ClustCNNEdgeEncoder
 
     encoders = {
         "geo"       : geometric.ClustGeoEdgeEncoder,
-        # "mix_debug" : mixed.ClustMixEdgeEncoder,
-        # "cnn": ClustCNNMinkEdgeEncoder
+        "mix_debug" : mixed.ClustMixEdgeEncoder,
+        "cnn": ClustCNNMinkEdgeEncoder
     }
 
     return encoders

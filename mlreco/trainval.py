@@ -13,8 +13,6 @@ from .utils.stopwatch import Stopwatch
 from .utils.adabound import AdaBound, AdaBoundW
 from .utils.unwrap import Unwrapper, input_unwrap_rules
 
-import mlreco.utils.lr_warmup as lr_schedulers
-
 
 class trainval(object):
     """
@@ -347,7 +345,7 @@ class trainval(object):
         optim_class = eval('torch.optim.' + self._optim)
         self._optimizer = optim_class([self._net.module.calibration_params], **self._optim_args)
         if self._lr_scheduler is not None:
-            scheduler_class = eval('lr_schedulers.' + self._lr_scheduler)
+            scheduler_class = eval('torch.optim.lr_scheduler.' + self._lr_scheduler)
             self._scheduler = scheduler_class(self._optimizer, **self._lr_scheduler_args)
         else:
             self._scheduler = None
@@ -508,15 +506,13 @@ class trainval(object):
             self._optimizer = AdaBound(self._net.parameters(), **self._optim_args)
         elif self._optim == 'AdaBoundW':
             self._optimizer = AdaBoundW(self._net.parameters(), **self._optim_args)
-        elif self._optim == 'AdamWT':
-            self._optimizer = lr_schedulers.AdamWT(self._net.parameters(), **self._optim_args)
         else:
             optim_class = eval('torch.optim.' + self._optim)
             self._optimizer = optim_class(self._net.parameters(), **self._optim_args)
 
         # Learning rate scheduler
         if self._lr_scheduler is not None:
-            scheduler_class = eval('lr_schedulers.' + self._lr_scheduler)
+            scheduler_class = eval('torch.optim.lr_scheduler.' + self._lr_scheduler)
             self._scheduler = scheduler_class(self._optimizer, **self._lr_scheduler_args)
         else:
             self._scheduler = None

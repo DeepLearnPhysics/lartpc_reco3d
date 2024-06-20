@@ -38,7 +38,7 @@ class NodeTypeLoss(torch.nn.Module):
         self.coords_col = coords_col
 
         self.group_col = loss_config.get('group_col', GROUP_COL)
-        self.target_col = loss_config.get('target_col', PID_COL)
+        self.target_col = loss_config.get('target_col', INTER_COL)
 
         # Set the loss
         self.loss = loss_config.get('loss', 'CE')
@@ -93,11 +93,6 @@ class NodeTypeLoss(torch.nn.Module):
                     continue
                 clusts = out['clusts'][i][j]
                 node_assn = get_cluster_label(labels, clusts, column=self.target_col)
-                
-                if node_assn.max() >= node_pred.shape[1]:
-                    msg = f'Node class label {int(node_assn.max())} exceeds the '\
-                        f'number of classes = {node_pred.shape[1]} in the prediction.'
-                    raise ValueError(msg)
 
                 # Do not apply loss to nodes labeled -1 (unknown class)
                 valid_mask = node_assn > -1
