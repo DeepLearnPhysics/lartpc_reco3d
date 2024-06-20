@@ -343,10 +343,6 @@ class TruthInteraction(Interaction):
         msg = super(TruthInteraction, self).__str__()
         return 'Truth'+msg
     
-    @property
-    def satisfiability(self):
-        raise ValueError("Satisfiability is a reco quantity and is not defined for TruthInteractions")
-    
     def nu_info(self):
         '''
         Simple printout of the neutrino information (if it exists)

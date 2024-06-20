@@ -11,3 +11,4 @@ from .label import ChildrenProcessor
 # from .neutrino import NeutrinoEnergyProcessor
 from .cathode_crossing import CathodeCrosserProcessor
 from .calibration import CalibrationProcessor
+from .vertex import VertexProcessor

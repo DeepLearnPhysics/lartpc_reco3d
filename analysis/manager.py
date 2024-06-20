@@ -102,7 +102,8 @@ class AnaToolsManager:
                         profile = True,
                         chain_config = None,
                         data_builders = None,
-                        event_list = None):
+                        event_list = None,
+                        is_lite=False):
         '''
         Initialize the main analysis tool parameters
 
@@ -137,6 +138,7 @@ class AnaToolsManager:
         self.load_principal_matches = load_only_principal_matches
         self.profile = profile
         self.event_list = event_list
+        self.is_lite = is_lite
 
         # Create the log directory if it does not exist and initialize log file
         if not os.path.isdir(log_dir):
@@ -160,7 +162,8 @@ class AnaToolsManager:
                 if builder_name not in SUPPORTED_BUILDERS:
                     msg = f'{builder_name} is not a valid data product builder!'
                     raise ValueError(msg)
-                builder = eval(builder_name)(convert_to_cm=convert_to_cm)
+                builder = eval(builder_name)(convert_to_cm=convert_to_cm,
+                                             is_lite=self.is_lite)
                 self.builders[builder_name] = builder
 
     def initialize_reader(self,
@@ -236,25 +239,25 @@ class AnaToolsManager:
         self.logger_dict['forward'] = dt
 
         # 1-a. Convert units
+        if not self.is_lite:
+            # Dumb check for repeated coordinate conversion. TODO: Fix
+            if 'input_rescaled' in res:
+                example_coords = res['input_rescaled'][0][:, COORD_COLS]
+            elif 'input_data' in data:
+                example_coords = data['input_data'][0][:, COORD_COLS]
+            else:
+                msg = 'Must have some coordinate information `input_rescaled` '\
+                    'in res, or `input_data` in data) to reconstruct quantities!'
+                raise KeyError(msg)
 
-        # Dumb check for repeated coordinate conversion. TODO: Fix
-        if 'input_rescaled' in res:
-            example_coords = res['input_rescaled'][0][:, COORD_COLS]
-        elif 'input_data' in data:
-            example_coords = data['input_data'][0][:, COORD_COLS]
-        else:
-            msg = 'Must have some coordinate information `input_rescaled` '\
-                'in res, or `input_data` in data) to reconstruct quantities!'
-            raise KeyError(msg)
+            rounding_error = (example_coords - example_coords.astype(int)).sum()
 
-        rounding_error = (example_coords - example_coords.astype(int)).sum()
-
-        if self.convert_to_cm and abs(rounding_error) > 1e-6:
-            msg = 'It looks like the input data has coordinates already '\
-                  'translated to cm from pixels, and you are trying to convert '\
-                  'coordinates again. Will not convert again.'
-            self.convert_to_cm = False
-            print(msg)
+            if self.convert_to_cm and abs(rounding_error) > 1e-6:
+                msg = 'It looks like the input data has coordinates already '\
+                    'translated to cm from pixels, and you are trying to convert '\
+                    'coordinates again. Will not convert again.'
+                self.convert_to_cm = False
+                print(msg)
 
         # 2. Build data representations'
         if self.builders is not None:
