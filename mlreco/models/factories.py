@@ -13,7 +13,6 @@ def model_dict():
     from . import uresnet
     from . import uresnet_ppn_chain
     from . import singlep
-    from . import multip
     from . import spice
     from . import graph_spice
     from . import grappa
@@ -34,8 +33,6 @@ def model_dict():
         "singlep": (singlep.ParticleImageClassifier, singlep.ParticleTypeLoss),
         # Multi Particle Classifier
         "multip": (singlep.MultiParticleImageClassifier, singlep.MultiParticleTypeLoss),
-        # ParticleNet
-        "particlenet": (multip.ParticleNet, multip.ParticleNetLoss),
         # SPICE
         "spice": (spice.SPICE, spice.SPICELoss),
         # Graph SPICE

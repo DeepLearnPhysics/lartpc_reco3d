@@ -7,7 +7,7 @@ import MinkowskiEngine as ME
 from mlreco.models.layers.common.uresnet_layers import UResNet
 from collections import defaultdict
 from mlreco.models.layers.common.activation_normalization_factories import activations_construct, normalizations_construct
-
+from mlreco.models.experimental.losses.classification import classification_loss_dict
 
 class UResNet_Chain(nn.Module):
     """
@@ -172,7 +172,9 @@ class SegmentationLoss(torch.nn.modules.loss._Loss):
         self._alpha = self._cfg.get('alpha', 1.0)
         self._beta = self._cfg.get('beta', 1.0)
         self._weight_loss = self._cfg.get('weight_loss', False)
-        self.cross_entropy = torch.nn.CrossEntropyLoss(reduction='none')
+        self.loss_fn = classification_loss_dict(self._cfg.get('loss_name', 'cross_entropy'))
+        self.loss_fn_kwargs = self._cfg.get('loss_kwargs', {})
+        self.loss_fn = self.loss_fn(**self.loss_fn_kwargs)
         self._batch_col = batch_col
 
         for c in range(self._num_classes):
@@ -279,7 +281,8 @@ class SegmentationLoss(torch.nn.modules.loss._Loss):
                         #print(class_count, w, class_count[0].item() > 0)
                         loss_seg = torch.nn.functional.cross_entropy(event_segmentation, event_label, weight=w)
                     else:
-                        loss_seg = self.cross_entropy(event_segmentation, event_label)
+                        loss_seg_dict = self.loss_fn(event_segmentation, event_label)
+                        loss_seg = loss_seg_dict['loss']
                         if weights is not None:
                             loss_seg *= weights[i][batch_index][:, -1].float()
                     if weights is not None:

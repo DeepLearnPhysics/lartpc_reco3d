@@ -118,50 +118,29 @@ class PointNetEncoder(torch.nn.Module):
         return out
     
     
-class PointNetMultiParticleEncoder(nn.Module):
+# class PointNetMultiParticleEncoder(nn.Module):
     
-    def __init__(self, cfg, name='pointnet_multi_encoder'):
-        super(PointNetMultiParticleEncoder, self).__init__()
-        self.encoder = PointNetEncoder(cfg)
-        self.latent_size = self.encoder.latent_size
-        self.split_col = GROUP_COL
-        self.batch_col = BATCH_COL
-        self.target_col = PID_COL
-        self.invalid_id = -1
+#     def __init__(self, cfg, name='pointnet_multi_encoder'):
+#         super(PointNetMultiParticleEncoder, self).__init__()
+#         self.encoder = PointNetEncoder(cfg)
         
-    def split_input(self, point_cloud, clusts=None):
-        point_cloud_cpu  = point_cloud.detach().cpu().numpy()
-        batches, bcounts = np.unique(point_cloud_cpu[:,self.batch_col], return_counts=True)
-        if clusts is None:
-            clusts = form_clusters(point_cloud_cpu, column=self.split_col)
-        if not len(clusts):
-            return point_cloud, [np.array([]) for _ in batches], []
+#         self.model_config = cfg[name]
+        
+#         self.latent_size = self.encoder.latent_size
+#         self.split_col = GROUP_COL
+#         self.batch_col = BATCH_COL
+#         self.target_col = PID_COL
+#         self.invalid_id = -1
+#         self.skip_invalid = False
+        
+#         self.num_classes = self.model_config['num_classes']
+        
+#     def forward(self, point_cloud, clusts=None):
+        
+#         res = {}
+        
+#         out, clusts_split, cbids = self.split_input(point_cloud, clusts)
 
-        if self.skip_invalid:
-            target_ids = get_cluster_label(point_cloud_cpu, clusts, column=self.target_col)
-            clusts = [c for i, c in enumerate(clusts) if target_ids[i] != self.invalid_id]
-            if not len(clusts):
-                return point_cloud, [np.array([]) for _ in batches], []
-
-        split_point_cloud = point_cloud.clone()
-        split_point_cloud[:, self.batch_col] = -1
-        for i, c in enumerate(clusts):
-            split_point_cloud[c, self.batch_col] = i
+#         out = self.encoder(out)
         
-        batch_ids = get_cluster_label(point_cloud_cpu, clusts, column=self.batch_col)
-        clusts_split, cbids = split_clusts(clusts, batch_ids, batches, bcounts)
-
-        return split_point_cloud[split_point_cloud[:,self.batch_col] > -1], clusts_split, cbids
-        
-    def forward(self, point_cloud, clusts):
-        
-        res = {}
-        
-        out, clusts_split, cbids = self.split_input(point_cloud, clusts)
-        res['clusts'] = [clusts_split]
-
-        out = self.encoder(out)
-        out = self.final_layer(out)
-        res['logits'] = [[out[b] for b in cbids]]
-        
-        return res
+#         return out

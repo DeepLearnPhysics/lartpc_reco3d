@@ -160,19 +160,19 @@ class CSAT:
         i = self.pid_to_index[pid]
         return self._solutions[var_name][i]
     
-    def get_satisfiability(self, var_name=None):
-        if var_name not in self._PVAR_NAMES:
-            raise ValueError(f"Variable name {var_name} not in list of particle variable names")
-        N = self._num_satisfied[var_name] / self._num_constraints[var_name]
-        score = N * self.solutions[var_name]
-        return score.mean()
+    # def get_satisfiability(self, var_name=None):
+    #     if var_name not in self._PVAR_NAMES:
+    #         raise ValueError(f"Variable name {var_name} not in list of particle variable names")
+    #     N = self._num_satisfied[var_name] / self._num_constraints[var_name]
+    #     score = N * self.solutions[var_name]
+    #     return score.mean()
     
-    @property
-    def satisfiability(self):
-        out = []
-        for var_name in self._PVAR_NAMES:
-            out.append(self.get_satisfiability(var_name))
-        return sum(out) / len(out)
+    # @property
+    # def satisfiability(self):
+    #     out = []
+    #     for var_name in self._PVAR_NAMES:
+    #         out.append(self.get_satisfiability(var_name))
+    #     return sum(out) / len(out)
             
         
     def __repr__(self):

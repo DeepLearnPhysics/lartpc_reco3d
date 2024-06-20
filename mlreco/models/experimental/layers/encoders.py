@@ -3,12 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from mlreco.utils.gnn.cluster import form_clusters
+from mlreco.utils.gnn.cluster import form_clusters, get_cluster_label
 from mlreco.utils.globals import *
 
 from mlreco.models.layers.common.cnn_encoder import SparseResidualEncoder
 from mlreco.models.experimental.layers.pointnet import PointNetEncoder
+from mlreco.models.layers.gnn import node_encoder_construct, edge_encoder_construct
 
+from collections import Counter
 
 def encoder_construct(name):
     
@@ -152,3 +154,28 @@ class MixedEncoder(nn.Module):
         out = torch.cat([out1, out2], dim=1)
         return self.norm(out)
         
+        
+class MixedGNNEncoder(nn.Module):
+    
+    def __init__(self, cfg, **kwargs):
+        super(MixedGNNEncoder, self).__init__()
+        self.geo_encoder = node_encoder_construct(cfg, model_name='geo_encoder', **kwargs)
+        self.param_encoder = node_encoder_construct(cfg, model_name='net_encoder', **kwargs)
+        self.num_features = self.geo_encoder.num_features + self.param_encoder.num_features
+        
+        self.mix_norm = nn.BatchNorm1d(self.num_features)
+        
+        print(f"Geo({self.geo_encoder.num_features}) + {self.param_encoder}({self.param_encoder.num_features}) = {self.num_features}")
+        
+    def forward(self, data, clusts=None):
+        
+        feats_geo = self.geo_encoder(data, clusts)
+        feats_cnn = self.param_encoder(data, clusts)
+        
+        # pid_labels = get_cluster_label(data, clusts, column=PID_COL).astype(int)
+        
+        # feats_geo = feats_geo[pid_labels != -1]
+        
+        out = torch.cat([feats_geo, feats_cnn], dim=1)
+
+        return out

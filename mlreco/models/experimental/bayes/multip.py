@@ -47,12 +47,26 @@ class ParticleNet(nn.Module):
         
         self.process_model_config(cfg, name)
         
+        if self.freeze_encoders:
+            print("Node Encoders are freezed, they will not be trained.")
+        if self.freeze_gnn:
+            print("GNN model is freezed, it will not be trained.")
+            
+        self.encoder_norm = nn.BatchNorm1d(self.num_node_features)
+        
         # Initialize encoders
         self.node_encoder = node_encoder_construct(cfg[name])
         self.edge_encoder = edge_encoder_construct(cfg[name])
+        
+        if self.freeze_encoders:
+            self.node_encoder.eval()
+            self.edge_encoder.eval()
 
         # Construct the GNN
         self.gnn_model = gnn_model_construct(cfg[name])
+
+        if self.freeze_gnn:
+            self.gnn_model.eval()
         
         print(f"Number of parameters in model: {sum(p.numel() for p in self.parameters())}")
         
@@ -64,7 +78,6 @@ class ParticleNet(nn.Module):
         self.name = name
         self.batch_index = BATCH_COL
         self.coords_index = COORD_COLS
-
         # Choose what type of node to use
         self.source_col       = base_config.get('source_col', 5)
         self.target_col       = base_config.get('target_col', 6)
@@ -121,6 +134,12 @@ class ParticleNet(nn.Module):
                                             batch_col=self.batch_index,
                                             coords_col=self.coords_index)
             
+            
+        self.num_node_features = cfg[name]['gnn_model'].get('num_node_features', 33)
+        
+        self.freeze_encoders = base_config.get('freeze_encoders', False)
+        self.freeze_gnn      = base_config.get('freeze_gnn', False)
+            
         
     def forward(self, data, clusts=None, 
                 groups=None, points=None, extra_feats=None, batch_size=None):
@@ -131,6 +150,8 @@ class ParticleNet(nn.Module):
         else:
             raise ValueError('ParticleNet requires a list of particles as input')
         result = {}
+        
+        cluster_data = cluster_data[cluster_data[:, PID_COL] != -1]
 
         # Form list of list of voxel indices, one list per cluster in the requested class
         if clusts is None:
@@ -273,9 +294,10 @@ class ParticleNet(nn.Module):
         result['node_features'] = [[x[b] for b in cbids]]
         result['edge_features'] = [[e[b] for b in ebids]]
 
+        x = self.encoder_norm(x)
+        
         # Pass through the model, update results
         out = self.gnn_model(x, index, e, xbatch)
-        
         # Unwrapped per image
         result['node_pred'] = [[out['node_pred'][0][b] for b in cbids]]
         result['edge_pred'] = [[out['edge_pred'][0][b] for b in ebids]]
