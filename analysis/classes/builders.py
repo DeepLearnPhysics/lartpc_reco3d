@@ -288,9 +288,9 @@ class ParticleBuilder(DataBuilder):
             return self._load_truth_lite(entry, data, result)
         
         out = []
-        true_nonghost  = data['cluster_label'][0]
-        pred_nonghost  = result['cluster_label_adapted'][0]
-        blueprints     = result['truth_particles'][0]
+        true_nonghost  = data['cluster_label'][entry]
+        pred_nonghost  = result['cluster_label_adapted'][entry]
+        blueprints     = result['truth_particles'][entry]
 
         if 'energy_label' in data:
             energy_label = data['energy_label'][entry]
@@ -298,7 +298,7 @@ class ParticleBuilder(DataBuilder):
             energy_label = None
 
         if 'sed' in data:
-            true_sed = data['sed'][0]
+            true_sed = data['sed'][entry]
         else:
             true_sed = None
         for i, bp in enumerate(blueprints):
@@ -329,7 +329,7 @@ class ParticleBuilder(DataBuilder):
                 prepared_bp['sed_points'] = true_sed[sed_mask][:, COORD_COLS]
                 prepared_bp['sed_depositions_MeV'] = true_sed[sed_mask][:, VALUE_COL]
             if 'input_rescaled_source' in result:
-                prepared_bp['sources'] = result['input_rescaled_source'][0][mask]
+                prepared_bp['sources'] = result['input_rescaled_source'][entry][mask]
 
             match = prepared_bp.pop('match', [])
             match_overlap = prepared_bp.pop('match_overlap', [])
@@ -358,7 +358,7 @@ class ParticleBuilder(DataBuilder):
             Result dictionary
         """
         out = []
-        blueprints     = result['truth_particles'][0]
+        blueprints     = result['truth_particles'][entry]
 
         for i, bp in enumerate(blueprints):
             pasis_selected = None
@@ -809,7 +809,7 @@ class InteractionBuilder(DataBuilder):
                     'truth_depositions_MeV': truth_depositions_MeV
                 })
                 if 'input_rescaled_source' in result:
-                    info['sources'] = result['input_rescaled_source'][0][mask]
+                    info['sources'] = result['input_rescaled_source'][entry][mask]
                 ia = TruthInteraction(**info)
                 ia.id = len(out)
                 ia.load_larcv_neutrino(info)
