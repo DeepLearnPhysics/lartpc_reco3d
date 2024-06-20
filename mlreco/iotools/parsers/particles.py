@@ -279,6 +279,7 @@ def parse_particle_singlep_pdg(particle_event):
     np.ndarray
         List of PDG codes for each particle in TTree.
     """
+    pdgs = []
     pdg = -1
     for p in particle_event.as_vector():
         if not p.track_id() == 1: continue
@@ -311,46 +312,11 @@ def parse_particle_singlep_einit(particle_event):
     np.ndarray
         List of true initial energy for each particle in TTree.
     """
+    einits = []
     einit = -1
     for p in particle_event.as_vector():
+        is_primary = p.track_id() == p.parent_track_id()
         if not p.track_id() == 1: continue
         return np.asarray([p.energy_init()])
 
     return np.asarray([einit])
-
-
-def parse_particle_singlep_startpoint(particle_event, sparse_event=None):
-    """
-    Get each true particle's true initial energy.
-
-    .. code-block:: yaml
-
-        schema:
-          startpoints:
-            parser: parse_particle_singlep_startpoint
-            args:
-              particle_event: particle_pcluster
-              sparse_event: sparse3d_pcluster
-    Configuration
-    ----------
-    particle_event : larcv::EventParticle
-
-    Returns
-    -------
-    np.ndarray
-        List of true initial energy for each particle in TTree.
-    """
-    startpoint = np.array([-1., -1., -1.])
-    meta = sparse_event.meta()
-    for p in particle_event.as_vector():
-        if not p.track_id() == 1: continue
-        startpoint = np.array([p.first_step().x(), p.first_step().y(), p.first_step().z()])
-        startpoint = np.array([startpoint[0] - meta.min_x(), 
-                               startpoint[1] - meta.min_y(), 
-                               startpoint[2] - meta.min_z()])
-        startpoint = np.array([startpoint[0] / meta.size_voxel_x(), 
-                               startpoint[1] / meta.size_voxel_y(), 
-                               startpoint[2] / meta.size_voxel_z()])
-        return np.asarray([startpoint])
-
-    return np.asarray([startpoint])
