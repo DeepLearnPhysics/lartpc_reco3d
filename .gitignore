@@ -16,6 +16,7 @@ __pycache__/
 config
 analysis/config
 mlreco/models/cluster_cnn/deprecated
+mlreco/models/experimental/cluster/pointnet2
 # C extensions
 *.so
 

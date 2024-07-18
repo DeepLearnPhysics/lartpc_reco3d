@@ -1,10 +1,10 @@
 import numpy as np
 
 from mlreco.utils.globals import TRACK_SHP, PID_MASSES, \
-        SHP_TO_PID, SHP_TO_PRIMARY
+        SHP_TO_PID, SHP_TO_PRIMARY, MICHL_SHP, PROT_PID, PHOT_PID, PION_PID
 
 from analysis.post_processing import PostProcessor
-
+from scipy.spatial.distance import cdist 
 
 class ParticleSemanticsProcessor(PostProcessor):
     '''
@@ -19,7 +19,8 @@ class ParticleSemanticsProcessor(PostProcessor):
 
     def __init__(self,
                  enforce_pid=True,
-                 enforce_primary=True):
+                 enforce_primary=True,
+                 michel_energy_threshold=-1):
         '''
         Store information about which particle properties should
         or should not be updated.
@@ -34,6 +35,7 @@ class ParticleSemanticsProcessor(PostProcessor):
         # Store parameters
         self.enforce_pid = enforce_pid
         self.enforce_primary = enforce_primary
+        self.michel_E_threhsold = michel_energy_threshold
 
     def process(self, data_dict, result_dict):
         '''
@@ -246,5 +248,73 @@ class InteractionTopologyProcessor(PostProcessor):
 
                 # Update the interaction particle counts
                 ii._update_particle_info()
+
+        return {}, {}
+
+class RecoVertexShowerProcessor(PostProcessor):
+    '''
+    Adjust the topology of interactions by applying thresholds
+    on the minimum kinetic energy of particles.
+    '''
+    name = 'shower_separation_processor'
+    result_cap = ['interactions']
+    # result_cap_opt = ['truth_interactions']
+
+    def __init__(self,
+                 threshold=2.5):
+        '''
+        Store the new thresholds to be used to update the PID
+        and primary information of particles.
+
+        Parameters
+        ----------
+        ke_thresholds : Union[float, dict]
+            If a scalr, it specifies a blanket KE cut to apply to all
+            particles. If it is a dictionary, it maps an PID to a KE threshold.
+            If a 'default' key is provided, it is used for all particles,
+            unless a number is provided for a specific PID.
+        reco_ke_mode : str, default 'ke'
+            Which `Particle` attribute to use to apply the KE thresholds
+        truth_ke_mode : str, default 'energy_deposit'
+            Which `TruthParticle` attribute to use to apply the KE thresholds
+        '''
+        # Initialize the run mode
+        super().__init__(run_mode='reco')
+        
+        self.threshold = threshold
+
+    def process(self, data_dict, result_dict):
+        '''
+        Update PID and primary predictions of one entry
+
+        Parameters
+        ----------
+        data_dict : dict
+            Input data dictionary
+        result_dict : dict
+            Chain output dictionary
+        '''
+
+        # Loop over interactions
+        for ia in result_dict['interactions']:
+            # Loop over particles, select the ones that pass a threshold
+            for p in ia.particles:
+                if not (p.semantic_type == 0 and p.pid == 1 and p.is_primary):
+                    continue
+                proton_points = []
+                for p2 in ia.particles:
+                    if (p2.pid == PROT_PID or p2.pid == PION_PID) and p2.is_primary:
+                        proton_points.append(p2.start_point)
+                if len(proton_points) > 0:
+                    proton_points = np.vstack(proton_points)
+                    start_to_closest_proton = cdist(proton_points, p.points)
+                    start_to_closest_proton = start_to_closest_proton.min()
+                else:
+                    start_to_closest_proton = -np.inf
+                if start_to_closest_proton >= self.threshold:
+                    p.pid = PHOT_PID
+
+            # Update the interaction particle counts
+            ia._update_particle_info()
 
         return {}, {}

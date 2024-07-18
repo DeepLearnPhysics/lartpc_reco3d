@@ -8,7 +8,6 @@ from mlreco.models.layers.common.uresnet_layers import UResNet
 from collections import defaultdict
 from mlreco.models.layers.common.activation_normalization_factories import activations_construct, normalizations_construct
 
-
 class UResNet_Chain(nn.Module):
     """
     UResNet implementation. Typical configuration should look like:

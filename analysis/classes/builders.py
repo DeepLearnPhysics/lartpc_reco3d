@@ -172,8 +172,9 @@ class ParticleBuilder(DataBuilder):
             - particles_asis
             - input_rescaled
     """
-    def __init__(self, convert_to_cm=False):
+    def __init__(self, convert_to_cm=False, is_lite=False):
         self.convert_to_cm = convert_to_cm
+        self.is_lite = is_lite
 
     def _load_reco(self, entry, data: dict, result: dict):
         """Construct Particle objects from loading HDF5 blueprints.
@@ -192,6 +193,10 @@ class ParticleBuilder(DataBuilder):
         out : List[Particle]
             List of restored particle instances built from HDF5 blueprints.
         """
+        
+        if self.is_lite:
+            return self._load_reco_lite(entry, data, result)
+        
         if 'input_rescaled' in result:
             point_cloud = result['input_rescaled'][entry]
         elif 'input_data' in data:
@@ -232,13 +237,60 @@ class ParticleBuilder(DataBuilder):
             out.append(particle)
 
         return out
+    
+    def _load_reco_lite(self, entry, data, result):
+        """Construct Particle objects from loading lite HDF5 files.
+
+        Parameters
+        ----------
+        entry : int
+            Image ID
+        data : dict
+            Data dictionary
+        result : dict
+            Result dictionary
+
+        Returns
+        -------
+        out : List[Particle]
+            List of restored particle instances built from HDF5 blueprints.
+        """
+        out  = []
+        blueprints = result['particles'][entry]
+        for i, bp in enumerate(blueprints):
+            mask = bp['index']
+            prepared_bp = copy.deepcopy(bp)
+
+            match = prepared_bp.pop('match', [])
+            match_overlap = prepared_bp.pop('match_overlap', [])
+
+            assert len(match) == len(match_overlap)
+
+            prepared_bp.pop('depositions_sum', None)
+            group_id = prepared_bp.pop('id', -1)
+            prepared_bp['group_id'] = group_id
+
+            particle = Particle(**prepared_bp)
+            particle.pid = bp['pid']
+            particle.is_primary = bp['is_primary']
+            if len(match) > 0:
+                particle.match_overlap = OrderedDict({
+                    key : val for key, val in zip(match, match_overlap)})
+            # assert particle.image_id == entry
+            out.append(particle)
+
+        return out
 
 
     def _load_truth(self, entry, data, result):
+        
+        if self.is_lite:
+            return self._load_truth_lite(entry, data, result)
+        
         out = []
-        true_nonghost  = data['cluster_label'][0]
-        pred_nonghost  = result['cluster_label_adapted'][0]
-        blueprints     = result['truth_particles'][0]
+        true_nonghost  = data['cluster_label'][entry]
+        pred_nonghost  = result['cluster_label_adapted'][entry]
+        blueprints     = result['truth_particles'][entry]
 
         if 'energy_label' in data:
             energy_label = data['energy_label'][entry]
@@ -246,7 +298,7 @@ class ParticleBuilder(DataBuilder):
             energy_label = None
 
         if 'sed' in data:
-            true_sed = data['sed'][0]
+            true_sed = data['sed'][entry]
         else:
             true_sed = None
         for i, bp in enumerate(blueprints):
@@ -277,7 +329,50 @@ class ParticleBuilder(DataBuilder):
                 prepared_bp['sed_points'] = true_sed[sed_mask][:, COORD_COLS]
                 prepared_bp['sed_depositions_MeV'] = true_sed[sed_mask][:, VALUE_COL]
             if 'input_rescaled_source' in result:
-                prepared_bp['sources'] = result['input_rescaled_source'][0][mask]
+                prepared_bp['sources'] = result['input_rescaled_source'][entry][mask]
+
+            match = prepared_bp.pop('match', [])
+            match_overlap = prepared_bp.pop('match_overlap', [])
+
+            truth_particle = TruthParticle(**prepared_bp)
+            truth_particle.load_larcv_attributes(prepared_bp)
+            if len(match) > 0:
+                truth_particle.match_overlap = OrderedDict({
+                    key : val for key, val in zip(match, match_overlap)})
+            # assert truth_particle.image_id == entry
+            assert truth_particle.truth_size > 0
+            out.append(truth_particle)
+
+        return out
+    
+    def _load_truth_lite(self, entry, data, result):
+        """Construct TruthParticle objects from loading lite HDF5 files.
+
+        Parameters
+        ----------
+        entry : int
+            Image ID
+        data : dict
+            Data dictionary
+        result : dict
+            Result dictionary
+        """
+        out = []
+        blueprints     = result['truth_particles'][entry]
+
+        for i, bp in enumerate(blueprints):
+            pasis_selected = None
+
+            prepared_bp = copy.deepcopy(bp)
+
+            group_id = prepared_bp.pop('id', -1)
+            prepared_bp['group_id'] = group_id
+            prepared_bp.pop('depositions_sum', None)
+            # Lite version does not have depositions
+            truth_depositions_MeV = np.empty(0, dtype=np.float32)
+            prepared_bp.update({
+                'particle_asis': pasis_selected
+            })
 
             match = prepared_bp.pop('match', [])
             match_overlap = prepared_bp.pop('match_overlap', [])
@@ -427,6 +522,7 @@ class ParticleBuilder(DataBuilder):
                 sed_index     = np.where(mask_sed)[0]
             else:
                 mask_sed, sed_index = np.array([]), np.array([])
+            
             if np.count_nonzero(mask_nonghost) <= 0:
                 continue  # Skip larcv particles with no true depositions
             # 1. Check if current pid is one of the existing group ids
@@ -514,6 +610,9 @@ class ParticleBuilder(DataBuilder):
             particle.start_point = particle.first_step
             if particle.semantic_type == TRACK_SHP:
                 particle.end_point = particle.last_step
+                
+            assert particle.points.shape[0] == particle.depositions.shape[0]
+            assert particle.truth_points.shape[0] == particle.truth_depositions.shape[0]
 
             out.append(particle)
 
@@ -538,8 +637,9 @@ class InteractionBuilder(DataBuilder):
             - cluster_label
             - neutrino_asis (optional)
     """
-    def __init__(self, convert_to_cm=False):
+    def __init__(self, convert_to_cm=False, is_lite=False):
         self.convert_to_cm = convert_to_cm
+        self.is_lite = is_lite
 
     def _build_reco(self, entry: int, data: dict, result: dict) -> List[Interaction]:
         particles = result['particles'][entry]
@@ -549,10 +649,14 @@ class InteractionBuilder(DataBuilder):
         return out
 
     def _load_reco(self, entry, data, result):
+        
+        if self.is_lite:
+            return self._load_reco_lite(entry, data, result)
+        
         if 'input_rescaled' in result:
-            point_cloud = result['input_rescaled'][0]
+            point_cloud = result['input_rescaled'][entry]
         elif 'input_data' in data:
-            point_cloud = data['input_data'][0]
+            point_cloud = data['input_data'][entry]
         else:
             msg = "To build Particle objects from HDF5 data, need either "\
                 "input_data inside data dictionary or input_rescaled inside"\
@@ -560,7 +664,7 @@ class InteractionBuilder(DataBuilder):
             raise KeyError(msg)
 
         out = []
-        blueprints = result['interactions'][0]
+        blueprints = result['interactions'][entry]
         use_particles = 'particles' in result
 
         if not use_particles:
@@ -578,7 +682,7 @@ class InteractionBuilder(DataBuilder):
                     info.pop(key)
             if use_particles:
                 particles = []
-                for p in result['particles'][0]:
+                for p in result['particles'][entry]:
                     if p.interaction_id == bp['id']:
                         particles.append(p)
                 ia = Interaction.from_particles(particles,
@@ -591,7 +695,7 @@ class InteractionBuilder(DataBuilder):
                     'depositions': point_cloud[mask][:, VALUE_COL]
                 })
                 if 'input_rescaled_source' in result:
-                    info['sources'] = result['input_rescaled_source'][0][mask]
+                    info['sources'] = result['input_rescaled_source'][entry][mask]
                 ia = Interaction(**info)
 
             # Handle matches
@@ -600,6 +704,47 @@ class InteractionBuilder(DataBuilder):
             out.append(ia)
 
         return out
+    
+    def _load_reco_lite(self, entry, data, result):
+
+        out = []
+        blueprints = result['interactions'][entry]
+        use_particles = 'particles' in result
+
+        if not use_particles:
+            msg = "Loading Interactions without building Particles. "\
+            "This means Interaction.particles will be empty!"
+            print(msg)
+
+        for i, bp in enumerate(blueprints):
+            
+            info = copy.deepcopy(bp)
+            info['interaction_id'] = info.pop('id', -1)
+            
+            for key in bp:
+                if key in SKIP_KEYS:
+                    info.pop(key)
+            if use_particles:
+                particles = []
+                for p in result['particles'][entry]:
+                    if p.interaction_id == bp['id']:
+                        particles.append(p)
+                ia = Interaction.from_particles(particles,
+                                                verbose=False, **info)
+            else:
+                mask = bp['index']
+                info.update({
+                    'index': mask
+                })
+                ia = Interaction(**info)
+
+            # Handle matches
+            match_overlap = OrderedDict({i: val for i, val in zip(bp['match'], bp['match_overlap'])})
+            ia._match_overlap = match_overlap
+            out.append(ia)
+
+        return out
+        
 
     def _build_truth(self, entry: int, data: dict, result: dict) -> List[TruthInteraction]:
         particles = result['truth_particles'][entry]
@@ -610,6 +755,10 @@ class InteractionBuilder(DataBuilder):
         return out
 
     def _load_truth(self, entry, data, result):
+        
+        if self.is_lite:
+            return self._load_truth_lite(entry, data, result)
+        
         true_nonghost = data['cluster_label'][entry]
         pred_nonghost = result['cluster_label_adapted'][entry]
 
@@ -660,7 +809,53 @@ class InteractionBuilder(DataBuilder):
                     'truth_depositions_MeV': truth_depositions_MeV
                 })
                 if 'input_rescaled_source' in result:
-                    info['sources'] = result['input_rescaled_source'][0][mask]
+                    info['sources'] = result['input_rescaled_source'][entry][mask]
+                ia = TruthInteraction(**info)
+                ia.id = len(out)
+                ia.load_larcv_neutrino(info)
+                
+            # Handle matches
+            match_overlap = OrderedDict({i: val for i, val in zip(bp['match'], bp['match_overlap'])})
+            ia._match_overlap = match_overlap
+
+            out.append(ia)
+        return out
+    
+    def _load_truth_lite(self, entry, data, result):
+
+        out = []
+        blueprints = result['truth_interactions'][entry]
+        use_particles = 'truth_particles' in result
+
+        if not use_particles:
+            msg = "Loading TruthInteractions without building TruthParticles. "\
+            "This means TruthInteraction.particles will be empty!"
+            print(msg)
+
+        for i, bp in enumerate(blueprints):
+
+            info = copy.deepcopy(bp)
+            info['interaction_id'] = info.pop('id', -1)
+            for key in bp:
+                if key in SKIP_KEYS:
+                    info.pop(key)
+            if use_particles:
+                particles = []
+                for p in result['truth_particles'][entry]:
+                    if p.interaction_id == bp['id']:
+                        particles.append(p)
+                ia = TruthInteraction.from_particles(particles,
+                                                     verbose=False,
+                                                     **info)
+                ia.load_larcv_neutrino(info)
+            else:
+                mask = bp['index']
+                true_mask = bp['truth_index']
+
+                info.update({
+                    'index': mask,
+                    'truth_index': true_mask
+                })
                 ia = TruthInteraction(**info)
                 ia.id = len(out)
                 ia.load_larcv_neutrino(info)
@@ -728,7 +923,8 @@ def handle_empty_truth_particles(labels_noghost,
                                  entry,
                                  verbose=False,
                                  sed=None,
-                                 mask_sed=None):
+                                 mask_sed=None,
+                                 energy_label=None):
     """
     Function for handling true larcv::Particle instances with valid
     true nonghost voxels but with no predicted nonghost voxels.
@@ -756,30 +952,35 @@ def handle_empty_truth_particles(labels_noghost,
     coords, depositions, voxel_indices = np.empty((0,3)), np.array([]), np.array([])
     coords_noghost, depositions_noghost = np.empty((0,3)), np.array([])
     sed_index, sed_points, sed_depositions_MeV = np.array([]), np.empty((0,3)), np.array([])
-    if np.count_nonzero(mask_noghost) > 0:
-        if sed is not None:
-            sed_points = sed[mask_sed][:, COORD_COLS]
-            sed_index = np.where(mask_sed)[0]
-            sed_depositions_MeV = sed[mask_sed][:, VALUE_COL]
-        coords_noghost = labels_noghost[mask_noghost][:, COORD_COLS]
-        true_voxel_indices = np.where(mask_noghost)[0]
-        depositions_noghost = labels_noghost[mask_noghost][:, VALUE_COL].squeeze()
-        truth_labels = get_truth_particle_labels(labels_noghost,
-                                                 mask_noghost,
-                                                 id=id,
-                                                 verbose=verbose)
 
-        semantic_type  = int(truth_labels[0])
-        #interaction_id = int(truth_labels[1])
-        interaction_id = p.interaction_id()
-        nu_id          = int(truth_labels[2])
-        pid            = int(truth_labels[3])
-        primary_id     = int(truth_labels[4])
-        is_primary     = bool(int(primary_id) == 1)
+    if sed is not None:
+        sed_points = sed[mask_sed][:, COORD_COLS]
+        sed_index = np.where(mask_sed)[0]
+        sed_depositions_MeV = sed[mask_sed][:, VALUE_COL]
+    coords_noghost = labels_noghost[mask_noghost][:, COORD_COLS]
+    true_voxel_indices = np.where(mask_noghost)[0]
+    depositions_noghost = labels_noghost[mask_noghost][:, VALUE_COL].squeeze()
+    truth_labels = get_truth_particle_labels(labels_noghost,
+                                                mask_noghost,
+                                                id=id,
+                                                verbose=verbose)
 
-        volume_id, cts = np.unique(labels_noghost[:, BATCH_COL][mask_noghost].astype(int),
-                                    return_counts=True)
-        volume_id = int(volume_id[cts.argmax()])
+    semantic_type  = int(truth_labels[0])
+    #interaction_id = int(truth_labels[1])
+    interaction_id = p.interaction_id()
+    nu_id          = int(truth_labels[2])
+    pid            = int(truth_labels[3])
+    primary_id     = int(truth_labels[4])
+    is_primary     = bool(int(primary_id) == 1)
+
+    volume_id, cts = np.unique(labels_noghost[:, BATCH_COL][mask_noghost].astype(int),
+                                return_counts=True)
+    volume_id = int(volume_id[cts.argmax()])
+    
+    if energy_label is not None:
+        truth_depositions_MeV = energy_label[mask_noghost][:, VALUE_COL]
+    else:
+        truth_depositions_MeV = np.empty(0, dtype=np.float32)
 
     particle = TruthParticle(group_id=id,
                              interaction_id=interaction_id,
@@ -794,8 +995,8 @@ def handle_empty_truth_particles(labels_noghost,
                              depositions_MeV=np.empty(0, dtype=np.float32),
                              truth_index=true_voxel_indices,
                              truth_points=coords_noghost,
-                             truth_depositions=np.empty(0, dtype=np.float32), #TODO
-                             truth_depositions_MeV=depositions_noghost,
+                             truth_depositions=depositions_noghost,
+                             truth_depositions_MeV=truth_depositions_MeV,
                              is_primary=is_primary,
                              sed_index=sed_index.astype(np.int64),
                              sed_points=sed_points.astype(np.float32),
@@ -803,6 +1004,10 @@ def handle_empty_truth_particles(labels_noghost,
                              particle_asis=p,
                              start_point=-np.ones(3, dtype=np.float32),
                              end_point=-np.ones(3, dtype=np.float32))
+    
+    assert particle.truth_points.shape[0] == particle.truth_depositions.shape[0]
+    assert particle.truth_points.shape[0] > 0
+    
     return particle
 
 

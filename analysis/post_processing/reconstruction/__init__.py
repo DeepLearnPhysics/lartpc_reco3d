@@ -5,10 +5,10 @@ from .calorimetry import CalorimetricEnergyProcessor
 from .tracking import CSDAEnergyProcessor
 from .mcs import MCSEnergyProcessor
 from .kinematics import ParticleSemanticsProcessor, \
-        ParticlePropertiesProcessor, InteractionTopologyProcessor
-from .vertex import VertexProcessor
+        ParticlePropertiesProcessor, InteractionTopologyProcessor, RecoVertexShowerProcessor
 from .ppn import PPNProcessor
 from .label import ChildrenProcessor
 # from .neutrino import NeutrinoEnergyProcessor
 from .cathode_crossing import CathodeCrosserProcessor
 from .calibration import CalibrationProcessor
+from .vertex import VertexProcessor

@@ -5,6 +5,7 @@ import numpy as np
 import sys
 
 from analysis.classes import TruthInteraction, TruthParticle, Interaction, TruthParticleFragment
+from mlreco.utils.globals import *
 
 def tag(tag_name):
     '''

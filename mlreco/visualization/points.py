@@ -68,6 +68,7 @@ def scatter_points(points, color=None, colorscale=None, cmin=None, cmax=None, op
     if (cmin is None) ^ (cmax is None) and color is not None and not np.isscalar(color):
         if not cmin: cmin = min(np.min(color), cmax*(1-1e-6))
         if not cmax: cmax = max(np.max(color), cmin*(1+1e-6))
+    color = np.array(color)
 
     # Initialize and return
     trace_dict = dict(
@@ -85,7 +86,6 @@ def scatter_points(points, color=None, colorscale=None, cmin=None, cmax=None, op
             text = hovertext,
             **kwargs
             )
-
     if dim == 3:
         trace_dict['z'] = points[:,coord_cols[2]]
         return [go.Scatter3d(**trace_dict)]
@@ -118,7 +118,7 @@ class Scatter3D:
                     mode='markers',
                     marker=dict(
                         size=5,
-                        color='red',
+                        color='yellow',
                         # colorscale=colorscale,
                         opacity=0.6),
                         # hovertext=p.ppn_candidates[:, 4],
@@ -134,7 +134,7 @@ class Scatter3D:
                     mode='markers',
                     marker=dict(
                         size=5,
-                        color='cyan',
+                        color='pink',
                         # line=dict(width=2, color='red'),
                         # cmin=cmin, cmax=cmax,
                         # colorscale=colorscale,
@@ -161,31 +161,39 @@ class Scatter3D:
                     name='{} {} Vertex'.format(type(ia).__name__, ia.id))
                 self._traces.append(plot)
 
-    def set_pixel_color(self, objects, color, colorscale=None, precmin=None, precmax=None, mode='points'):
+    def set_pixel_color(self, objects, color, colorscale=None, precmin=None, precmax=None, mode='points',
+                        randomize_colors=False):
 
         cmin, cmax = np.inf, -np.inf
+        temp_colors = {}
 
         if 'depositions' not in color:
             for entry in objects:
                 attribute = getattr(entry, color)
                 assert np.isscalar(attribute)
-                self._colors[int(entry.id)] = int(attribute) \
+                temp_colors[int(entry.id)] = int(attribute) \
                     * np.ones(getattr(entry, mode).shape[0], dtype=np.int64)
 
-                if int(attribute) < cmin:
-                    cmin = int(attribute)
-                if int(attribute) > cmax:
-                    cmax = int(attribute)
+                cmin = min(cmin, int(attribute))
+                cmax = max(cmax, int(attribute))
         else:
             for entry in objects:
                 depositions = getattr(entry, color)
                 assert isinstance(depositions, np.ndarray)
-                self._colors[int(entry.id)] = depositions
+                temp_colors[int(entry.id)] = depositions
                 dmin, dmax = depositions.min(), depositions.max()
-                if dmin < cmin:
-                    cmin = dmin
-                if dmax > cmax:
-                    cmax = dmax
+                cmin = min(dmin, cmin)
+                cmax = max(dmax, cmax)
+                
+        if randomize_colors:
+            if 'depositions' in color:
+                raise ValueError('Randomizing colors is not supported / does not make sense for depositions.')
+            randcols = np.random.permutation(len(temp_colors))
+            
+            for i, key in enumerate(temp_colors.keys()):
+                self._colors[key] = randcols[i] * np.ones_like(temp_colors[key])
+        else:
+            self._colors = temp_colors
 
         self._color_bounds = [cmin, cmax]
 
@@ -227,7 +235,7 @@ class Scatter3D:
     def __call__(self, objects, color='id', mode='points', colorscale='rainbow', 
                  legend_name=None,
                  cmin=None, cmax=None, size=1, scatter_start_points=False, 
-                 scatter_end_points=False, scatter_vertices=False, **kwargs):
+                 scatter_end_points=False, scatter_vertices=False, randomize_colors=False, **kwargs):
 
         if not len(objects):
             return []
@@ -235,7 +243,8 @@ class Scatter3D:
         self.check_attribute_name(objects, color)
         self.clear_state()
 
-        self.set_pixel_color(objects, color, colorscale, cmin, cmax, mode)
+        self.set_pixel_color(objects, color, colorscale, cmin, cmax, mode, 
+                             randomize_colors=randomize_colors)
 
         for entry in objects:
             if getattr(entry, mode).shape[0] <= 0:

@@ -8,7 +8,8 @@ from functools import cached_property
 from . import Interaction, TruthParticle
 from .Interaction import _process_interaction_attributes
 
-from mlreco.utils.globals import PID_LABELS
+from mlreco.utils import pixel_to_cm
+from mlreco.utils.globals import PID_LABELS, NU_CURR_TYPE, NU_INT_TYPE
 from mlreco.utils.decorators import inherit_docstring
 
 @inherit_docstring(Interaction)
@@ -106,8 +107,8 @@ class TruthInteraction(Interaction):
 
         if self._particles is None:
             self._depositions_MeV        = depositions_MeV
-            self._truth_depositions      = truth_depositions
-            self._truth_depositions_MeV  = truth_depositions_MeV
+            self._truth_depositions      = truth_depositions.astype(np.float32)
+            self._truth_depositions_MeV  = truth_depositions_MeV.astype(np.float32)
             self.truth_points = truth_points
             self.truth_index = truth_index
 
@@ -341,6 +342,23 @@ class TruthInteraction(Interaction):
     def __str__(self):
         msg = super(TruthInteraction, self).__str__()
         return 'Truth'+msg
+    
+    def nu_info(self):
+        '''
+        Simple printout of the neutrino information (if it exists)
+        '''
+        
+        msg = f'''
+        Neutrino Interaction: {self.nu_pdg_code}
+        ------------------------
+        Interaction Type : {NU_INT_TYPE[self.nu_interaction_type]}
+        Interaction Mode : {self.nu_interaction_mode}
+        Current Type     : {NU_CURR_TYPE[self.nu_current_type]}
+        Nu Initial Energy: {self.nu_energy_init * 1000:.2f} MeV
+        True Topology    : {self.truth_topology}
+        Visible Topology : {self.topology}
+        '''
+        return msg
 
 
 # ------------------------------Helper Functions---------------------------

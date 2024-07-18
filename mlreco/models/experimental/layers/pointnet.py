@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius
+from mlreco.utils.globals import *
+from mlreco.utils.gnn.cluster import form_clusters, get_cluster_label
+from mlreco.utils.gnn.data import split_clusts
 
 # From Pytorch Geometric Examples for PointNet:
 # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pointnet2_classification.py
@@ -85,8 +88,8 @@ class PointNet(torch.nn.Module):
         self.sa3_module = GlobalSAModule(MLP(self.mlp_specs_glob))
         self.mlp = MLP(self.mlp_specs_final, dropout=self.dropout, norm=None)
 
-    def forward(self, data):
-        sa0_out = (data.x, data.pos, data.batch)
+    def forward(self, x, pos, batch):
+        sa0_out = (x, pos, batch)
 
         out = sa0_out
 
@@ -106,6 +109,38 @@ class PointNetEncoder(torch.nn.Module):
         self.net = PointNet(cfg)
         self.latent_size = self.net.latent_size
 
-    def forward(self, batch):
-        out = self.net(batch)
+    def forward(self, input_tensor, startpoints=None):
+        pos = input_tensor[:, COORD_COLS]
+        batch = input_tensor[:, BATCH_COL].long()
+        x = input_tensor[:, VALUE_COL].view(-1, 1)
+        
+        out = self.net(x, pos, batch)
         return out
+    
+    
+# class PointNetMultiParticleEncoder(nn.Module):
+    
+#     def __init__(self, cfg, name='pointnet_multi_encoder'):
+#         super(PointNetMultiParticleEncoder, self).__init__()
+#         self.encoder = PointNetEncoder(cfg)
+        
+#         self.model_config = cfg[name]
+        
+#         self.latent_size = self.encoder.latent_size
+#         self.split_col = GROUP_COL
+#         self.batch_col = BATCH_COL
+#         self.target_col = PID_COL
+#         self.invalid_id = -1
+#         self.skip_invalid = False
+        
+#         self.num_classes = self.model_config['num_classes']
+        
+#     def forward(self, point_cloud, clusts=None):
+        
+#         res = {}
+        
+#         out, clusts_split, cbids = self.split_input(point_cloud, clusts)
+
+#         out = self.encoder(out)
+        
+#         return out

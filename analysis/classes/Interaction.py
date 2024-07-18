@@ -79,7 +79,8 @@ class Interaction:
                  is_fiducial: bool = False,
                  is_ccrosser: bool = False,
                  coffset: float = -np.inf,
-                 units: str = 'px', **kwargs):
+                 units: str = 'px', 
+                 **kwargs):
 
         # Initialize attributes
         self.id           = int(interaction_id)
@@ -266,6 +267,7 @@ class Interaction:
 
         self._num_particles = np.sum(self._particle_counts)
         self._num_primaries = np.sum(self._primary_counts)
+
 
     @property
     def particle_ids(self):

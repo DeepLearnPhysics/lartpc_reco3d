@@ -13,7 +13,6 @@ def write_to(filenames=[]):
         def wrapper(data_dict, result_dict, **kwargs):
 
             # TODO: Handle unwrap/non-unwrap
-
             out = func(data_dict, result_dict, **kwargs)
             return out
         
